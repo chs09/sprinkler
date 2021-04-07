@@ -55,7 +55,9 @@ jobs:
         java-version: '15'
         distribution: 'adopt'
     - name: Build with Gradle
-      run: ./gradlew build
+      uses: eskatos/gradle-command-action@v1.3.3
+      with:
+        arguments: build
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
