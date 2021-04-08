@@ -53,8 +53,9 @@ jobs:
       uses: actions/setup-java@v2
       with:
         java-version: '15'
-    - name: Build with Gradle
-      run: ./gradlew build
+        distribution: adopt
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v1
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
