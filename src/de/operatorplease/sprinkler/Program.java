@@ -4,101 +4,84 @@ import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.Map.Entry;
 
-public class Program {
-	private int pid;
-	private boolean enabled = true;
-	private boolean use_weather = true;
-	private boolean sequential = true;
+import org.shredzone.commons.suncalc.SunTimes;
+
+import de.operatorplease.sprinkler.settings.Plan;
+import de.operatorplease.sprinkler.settings.StartTime;
+import de.operatorplease.sprinkler.settings.Plan.EvenOddRestriction;
+
+class Program {
+	private LocalTime sunrise = LocalTime.of(7, 0);
+	private LocalTime sunset = LocalTime.of(21, 0);
+	private LocalDateTime sunupdate = LocalDateTime.MIN;
 	
-	// odd/even restriction:
-	// 0->none, 1->odd day (except 31st and Feb 29th)
-	// 2->even day
-	public enum EvenOddRestriction {
-		NONE, ODD, EVEN
+	private Plan plan;
+	
+	public Program(Plan plan) {
+		this.plan = Objects.requireNonNull(plan, "Plan should not be null");
+	}
+	
+	private void computeSunTimes() {
+		try {
+			sunupdate = LocalDateTime.now();
+			ZonedDateTime dateTime = sunupdate.atZone(ZoneId.systemDefault());
+			double lat = 0, lng = 0;// geolocation
+			SunTimes times = SunTimes.compute()
+					.on(dateTime)   // set a date
+					.at(lat, lng)   // set a location
+					.execute();     // get the results
+			
+			sunrise = times.getRise().toLocalTime();
+			sunset = times.getSet().toLocalTime();
+			
+			System.out.println("Sun times: " + times);
+		} catch (Exception e) {
+			// TODO logger
+			e.printStackTrace();
+		}
+	}
+	
+	private LocalTime getSunriseTime() {
+		if(sunupdate.isBefore(LocalDateTime.now())) {
+			computeSunTimes();
+		}
+		return sunrise;
+	}
+	
+	private LocalTime getSunsetTime() {
+		if(sunupdate.isBefore(LocalDateTime.now())) {
+			computeSunTimes();
+		}
+		return sunset;
+	}
+	
+	public LocalTime decode(StartTime start) {
+		int offset = start.getOffset();
+		switch(start.getType()) {
+			case FIXED:
+				return LocalTime.of(offset / 60, offset % 60);
+				
+			case SUNRISE:
+				return getSunriseTime().plusMinutes(offset);
+				
+			case SUNSET:
+				return getSunsetTime().plusMinutes(offset);
+		}
+		throw new IllegalStateException();
 	}
 
-	private EvenOddRestriction oddeven = EvenOddRestriction.NONE;
-
-	public enum ScheduleType {
-		WEEKLY, BIWEEKLY, MONTHLY
-	}
-
-	private ScheduleType type = ScheduleType.MONTHLY;
-
-	// weekly: days correspond to Monday till Sunday (binary OR)
-	// bi-weekly: days correspond to Monday till Sunday (binary OR)
-	// monthly: days stores the day of the month (32 means last day of month)
-	private int days;
-
-	// program start time
-	private List<StartTime> starttimes = new ArrayList<>();
-
-	// program is a fixed start time or a repeating type
-	private int repeat = 0;
-
-	// interval in minutes if repeat == true
-	private int delay = 0;
-
-	private final Map<Integer, Short> durations = new HashMap<>(); // duration / water time of each zone
-
-	private String name;
-
-	public boolean isSequential() {
-		return this.sequential;
-	}
-	
-	public void setSeqential(boolean sequential) {
-		this.sequential = sequential;
-	}
-	
-	public void setWeatherDependent(boolean use_weather) {
-		this.use_weather = use_weather;
-	}
-	
-	public boolean isWeatherDependent() {
-		return use_weather;
-	}
-	
-	public String getName() {
-		return name;
-	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public short getDuration(Zone zone) {
-		return durations.getOrDefault(zone.getZid(), Short.valueOf((short) 0));
-	}
-	
-	public void setDuration(Zone zone, short minutes) {
-		if(minutes < 0)
-			throw new IllegalArgumentException("watering duration cannot be less than 0");
-		durations.put(zone.getZid(), minutes);
-	}
-	
-	public Set<Entry<Integer, Short>> getDurations() {
-		return durations.entrySet();
-	}
-	
-	public boolean isEnabled() {
-		return enabled;
-	}
-	
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
-	}
-	
-	public int getPid() {
-		return pid;
+	public boolean matches(StartTime start, LocalTime now) {
+		LocalTime time = decode(start);
+		return (ChronoUnit.MINUTES.between(time, now) == 0);
 	}
 	
 	/** Check if a given time matches the program's start day */
@@ -108,7 +91,8 @@ public class Program {
 		Month month_t = t.getMonth();
 
 		// check day match
-		switch (type) {
+		int days = plan.getDays();
+		switch (plan.getType()) {
 		case BIWEEKLY:
 			int week = t.get(WeekFields.ISO.weekOfWeekBasedYear());
 			if (week % 2 == 0)
@@ -128,6 +112,7 @@ public class Program {
 		}
 
 		// check odd/even day restriction
+		EvenOddRestriction oddeven = plan.getOddeven();
 		if (oddeven == EvenOddRestriction.EVEN) {
 			// even day restriction
 			if ((day_t % 2) != 0)
@@ -151,7 +136,7 @@ public class Program {
 
 	public boolean matches(LocalDateTime t) {
 		// check program enable status
-		if (!enabled) {
+		if (!plan.isEnabled()) {
 			return false;
 		}
 
@@ -159,10 +144,15 @@ public class Program {
 
 		// first assume program starts today
 		if (checkDayMatch(t)) {
+			List<StartTime> starttimes = plan.getStarttimes();
+			
+			int repeat = plan.getRepeat();
+			int delay = plan.getDelay();
+			
 			// t matches the program's start day
 			if (repeat == 0) {
 				for (StartTime s : starttimes) {
-					if (s.matches(time)) {
+					if (matches(s, time)) {
 						// if current minute matches any of the given start time return true
 						return true;
 					}
@@ -179,15 +169,16 @@ public class Program {
 				StartTime start = starttimes.get(0);
 
 				// if current_minute matches start time, return true
-				if (start.matches(time))
+				if (matches(start, time))
 					return true;
 
 				// otherwise, current_minute must be larger than start time, and interval must
 				// be non-zero
-				if (offset(t.toLocalTime()) > offset(start.decode()) && delay > 0) {
+				if (offset(t.toLocalTime()) > offset(decode(start)) && delay > 0) {
+					LocalTime st = decode(start);
 					for (int loop = 1; loop <= repeat; loop++) {
-						start = start.plus(delay);
-						if (start.matches(time)) {
+						st = st.plusMinutes(delay);
+						if (ChronoUnit.MINUTES.between(st, time) == 0) {
 							return true;
 						}
 					}
@@ -207,5 +198,29 @@ public class Program {
 //					}
 //				}
 		return false;
+	}
+
+	public boolean isWeatherDependent() {
+		return plan.isWeatherDependent();
+	}
+
+	public boolean isSequential() {
+		return plan.isSequential();
+	}
+	
+	public boolean isEnabled() {
+		return plan.isEnabled();
+	}
+	
+	public int getPid() {
+		return plan.getPid();
+	}
+	
+	public Plan getPlan() {
+		return plan;
+	}
+
+	public Set<Entry<Integer, Short>> getDurations() {
+		return plan.getDurations();
 	}
 }

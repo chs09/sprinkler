@@ -1,11 +1,10 @@
-package de.operatorplease.sprinkler;
+package de.operatorplease.sprinkler.settings;
 
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 
 // in Minutes per Day
 public class StartTime {
-	enum Type {
+	public enum Type {
 		FIXED,
 		SUNRISE,
 		SUNSET
@@ -36,35 +35,11 @@ public class StartTime {
 		return instance;
 	}
 	
-	public StartTime plus(int offset) {
-		return of(type, this.offset + offset);
+	public int getOffset() {
+		return offset;
 	}
 	
-	private LocalTime getSunriseTime() {
-		// TODO https://shredzone.org/maven/commons-suncalc/index.html
-		return LocalTime.of(7, 0);
-	}
-	
-	private LocalTime getSunsetTime() {
-		return LocalTime.of(21, 0);
-	}
-	
-	public LocalTime decode() {
-		switch(type) {
-			case FIXED:
-				return LocalTime.of(offset / 60, offset % 60);
-				
-			case SUNRISE:
-				return getSunriseTime().plusMinutes(offset);
-				
-			case SUNSET:
-				return getSunsetTime().plusMinutes(offset);
-		}
-		throw new IllegalStateException();
-	}
-	
-	public boolean matches(LocalTime now) {
-		LocalTime time = decode();
-		return (ChronoUnit.MINUTES.between(time, now) == 0);
+	public Type getType() {
+		return type;
 	}
 }

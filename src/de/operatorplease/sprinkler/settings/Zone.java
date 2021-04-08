@@ -1,6 +1,6 @@
-package de.operatorplease.sprinkler;
+package de.operatorplease.sprinkler.settings;
 
-public abstract class Zone {
+public class Zone {
 	private int zid;
 	private boolean disabled;
 	
@@ -12,19 +12,12 @@ public abstract class Zone {
 		return zid;
 	}
 	
-	public boolean isActive() {
-		return false;
-	}
-	
 	public boolean isDisabled() {
 		return disabled;
 	}
 	
-	public abstract void stop();
-	public abstract void start();
-	
 	@Override
 	public String toString() {
-		return "Zone[" + zid + "]";
+		return "Zone[zid=" + zid + (disabled ? ", disabled": "") + "]";
 	}
 }
