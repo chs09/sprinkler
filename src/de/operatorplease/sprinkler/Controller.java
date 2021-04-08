@@ -251,6 +251,11 @@ public class Controller implements Runnable {
 				scheduleZones();
 			} // if_check_current_minute
 		}
+
+		public void reset() {
+			runningProgram = null;
+			queue.clear();
+		}
 	}
 	
 
@@ -313,25 +318,25 @@ public class Controller implements Runnable {
 			}
 		}
 
+		// ====== schedule program data ======
+		scheduler.schedule(now);
+		
 		// ===== Check program switch status =====
 		Optional<Sensor> pswitch = sensors.stream().filter(s -> s.getType() == TYPE.SENSOR_TYPE_PSWITCH).findFirst();
 		if (pswitch.isPresent()) {
 			Sensor button = pswitch.get();
-			if (button.isActive()) {
-				resetAllZonesImmediate(); // immediately stop all zones
-			}
-
 			int value = (int) button.getValue();
-			if ((value & 0x01) != 0) {
+			if ((value & 0b11) == 0b11) {
+				resetAllZonesImmediate(); // immediately stop all zones
+				scheduler.reset();
+			}
+			else if ((value & 0b01) != 0) {
 //					if(pd.nprograms > 0)	manual_start_program(1, 0);
 			}
-			if ((value & 0x02) != 0) {
+			else if ((value & 0b10) != 0) {
 //					if(pd.nprograms > 1)	manual_start_program(2, 0);
 			}
 		}
-
-		// ====== schedule program data ======
-		scheduler.schedule(now);
 		
 		// ====== check network connection ====== 
 		checkNetwork();

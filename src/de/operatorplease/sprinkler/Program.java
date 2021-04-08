@@ -18,32 +18,44 @@ import org.shredzone.commons.suncalc.SunTimes;
 import de.operatorplease.sprinkler.settings.Plan;
 import de.operatorplease.sprinkler.settings.StartTime;
 import de.operatorplease.sprinkler.settings.Plan.EvenOddRestriction;
+import de.operatorplease.sprinkler.settings.Settings;
 
 class Program {
 	private LocalTime sunrise = LocalTime.of(7, 0);
 	private LocalTime sunset = LocalTime.of(21, 0);
 	private LocalDateTime sunupdate = LocalDateTime.MIN;
 	
-	private Plan plan;
+	// underlying plan with times and zone allocation
+	private final Plan plan;
+	
+	// main valve; cannot be changed after instantiation, program has to be reloaded
+	private final Integer mainValveId;
 	
 	public Program(Plan plan) {
 		this.plan = Objects.requireNonNull(plan, "Plan should not be null");
+		this.mainValveId = plan.getMainValve();
 	}
 	
 	private void computeSunTimes() {
+		Settings.Location location = new Settings().location; // TODO
 		try {
 			sunupdate = LocalDateTime.now();
-			ZonedDateTime dateTime = sunupdate.atZone(ZoneId.systemDefault());
-			double lat = 0, lng = 0;// geolocation
-			SunTimes times = SunTimes.compute()
-					.on(dateTime)   // set a date
-					.at(lat, lng)   // set a location
-					.execute();     // get the results
-			
-			sunrise = times.getRise().toLocalTime();
-			sunset = times.getSet().toLocalTime();
-			
-			System.out.println("Sun times: " + times);
+			// get sunset and sunrise if location is configured
+			if(location != null) {
+				ZonedDateTime dateTime = sunupdate.atZone(ZoneId.systemDefault());
+				SunTimes times = SunTimes.compute()
+						// set a date
+						.on(dateTime)
+						// set a location
+						.at(location.lat, location.lon)
+						// get the results
+						.execute();
+
+				sunrise = times.getRise().toLocalTime();
+				sunset = times.getSet().toLocalTime();
+
+				System.out.println("Sun times: " + times);
+			}
 		} catch (Exception e) {
 			// TODO logger
 			e.printStackTrace();
@@ -217,7 +229,7 @@ class Program {
 	}
 	
 	public Integer getMainValveId() {
-		return plan.getMainValve();
+		return mainValveId;
 	}
 	
 	public Plan getPlan() {
