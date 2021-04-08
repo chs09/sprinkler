@@ -216,6 +216,10 @@ class Program {
 		return plan.getPid();
 	}
 	
+	public Integer getMainValveId() {
+		return plan.getMainValve();
+	}
+	
 	public Plan getPlan() {
 		return plan;
 	}

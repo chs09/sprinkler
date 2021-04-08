@@ -44,8 +44,18 @@ public class Plan {
 
 	private final Map<Integer, Short> durations = new HashMap<>(); // duration / water time of each zone
 
+	private Integer mainValve = null;
+	
 	private String name;
 
+	public Integer getMainValve() {
+		return mainValve;
+	}
+	
+	public void setMainValve(Integer mainValve) {
+		this.mainValve = mainValve;
+	}
+	
 	public boolean isSequential() {
 		return this.sequential;
 	}

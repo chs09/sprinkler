@@ -31,18 +31,21 @@ public class Controller implements Runnable {
 	private LocalDateTime next_weather_check;
 	private LocalDateTime rd_stop_time;
 
-	private Notifier notifier = new Notifier() {
-	};
-	private Status status = new Status();
-	private Display display = new Display();
+	private final Notifier notifier = new Notifier();
 	private final Scheduler scheduler = new Scheduler();
+	private final Status status = new Status();
 	
+	private Display display = new Display();
 	private Weather weather = new Weather();
 	private Clock clock = new Clock();
 	private List<Sensor> sensors = Collections.emptyList();
 	private List<Program> programs = Collections.emptyList();
-	private final StationMap zones = new StationMap();
+	private List<Station> stations = Collections.emptyList();
 
+	public void setDisplay(Display display) {
+		this.display = display;
+	}
+	
 	public void setWeather(Weather weather) {
 		this.weather = weather;
 	}
@@ -51,13 +54,9 @@ public class Controller implements Runnable {
 		this.clock = Objects.requireNonNull(clock);
 	}
 	
-	public void setZones(Station main, List<Station> zones) {
-		if(main == null) {
-			main = StationMap.DUMMY_NO_MAIN_VALVE;
-		}
-		this.zones.clear();
-		if(zones != null) {
-			this.zones.addAll(main, zones);
+	public void setStations(List<Station> stations) {
+		if(stations != null) {
+			this.stations = stations;
 		}
 	}
 	
@@ -70,10 +69,7 @@ public class Controller implements Runnable {
 	}
 	
 	private void resetAllZonesImmediate() {
-		for (Station zone : zones.values()) {
-			zone.stop();
-		}
-		for (Station zone : zones.keySet()) {
+		for (Station zone : stations) {
 			zone.stop();
 		}
 	}
@@ -175,22 +171,17 @@ public class Controller implements Runnable {
 				int zid = entry.getKey();
 				int duration = entry.getValue();
 				
-				Station zone = zones.get(zid);
-				if (zone == null) {
+				Optional<Station> zone = stations.stream().filter(s -> s.getZoneId() == zid).findFirst();
+				if (zone.isEmpty()) {
 					logger.warning("Zone " + zid + " not available.");
 					continue;
 				}
 				
-				if(zone.isDisabled()) {
+				Station station = zone.get();
+				if(station.isDisabled()) {
 					continue;
 				}
-				
-				// skip if the zone is a main valve 
-				// because master cannot be scheduled independently
-				if (zones.containsKey(zone)) {
-					continue;
-				}
-				
+								
 				if (duration > 0) {
 					// water time is scaled by watering percentage
 					long wateringTime = TimeUnit.MILLISECONDS.convert(duration, TimeUnit.MINUTES);
@@ -219,7 +210,7 @@ public class Controller implements Runnable {
 							q.start = System.currentTimeMillis();
 						}
 						q.duration = wateringTime;
-						q.zone = zone;
+						q.zone = station;
 						
 						queue.add(q);
 					} // if water_time
@@ -372,22 +363,27 @@ public class Controller implements Runnable {
 	}
 
 	private void handleMainValve(Program runningProgram) {
-		for(Entry<Station, List<Station>> entry: zones.entrySet()) {
-			Station main = entry.getKey();
-			if(main == StationMap.DUMMY_NO_MAIN_VALVE) {
-				continue;
+		Integer mainValveId = runningProgram.getMainValveId();
+		if(mainValveId == null) {
+			return;
+		}
+		
+		Optional<Station> zone = stations.stream().filter(s -> s.getZoneId() == mainValveId).findFirst();
+		if(zone.isEmpty()) {
+			return;
+		}
+
+		Station main = zone.get();
+		boolean running = stations.stream()
+				.anyMatch( s -> s.isActive() && s.getZoneId() != mainValveId );
+
+		if(running) {
+			if(!main.isActive()) {
+				turnOn(main);
 			}
-			
-			List<Station> stations = entry.getValue();
-			boolean running = stations.stream().anyMatch(s -> s.isActive());
-			if(running) {
-				if(!main.isActive()) {
-					turnOn(main);
-				}
-			} else {
-				if(main.isActive()) {
-					turnOff(main);
-				}
+		} else {
+			if(main.isActive()) {
+				turnOff(main);
 			}
 		}
 	}

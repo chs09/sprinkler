@@ -1,22 +1,12 @@
 package de.operatorplease.sprinkler;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
 
-public abstract class Notifier {
-	
-	private static final AtomicReference<Notifier> instance = new AtomicReference<>();
-	
-	public static Notifier getInstance() {
-		return instance.get();
-	}
-	
-	public Notifier() {
-		instance.set(this);
-	}
+public class Notifier {
+	private final Logger logger = Logger.getLogger(Notifier.class.getName());
 	
 	enum MessageType {
 		/** Notification macro defines */
@@ -59,8 +49,9 @@ public abstract class Notifier {
 		
 		boolean modified = previous != null && previous != value;
 		if(modified) {
-			// TODO send message
-			System.out.println(LocalDateTime.now() + " " + type + "(" + which + ") " + datatype + ": " + value);
+			logger.info("Notification " + type + "(" + which + ") " + datatype + ": " + value);
+			
+			// TODO send MQTT message
 		}
 	}
 }
