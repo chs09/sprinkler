@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-public class Notifier {
+class Notifier {
 	private final Logger logger = Logger.getLogger(Notifier.class.getName());
 	
 	enum MessageType {

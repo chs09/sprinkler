@@ -5,14 +5,23 @@ public abstract class Sensor {
 	
 	public enum TYPE {
 		SENSOR_TYPE_RAIN,
+		
+		// unit: 1/100 °C, range -40000 to 165000
 		SENSOR_TYPE_TEMPERATURE,
+		
+		// unit: 1/100 %, range 0 to 10000
+		SENSOR_TYPE_HUMIDITY,
+		
 		SENSOR_TYPE_FLOW,
+		
 		SENSOR_TYPE_SOIL,
+		
+		// unit: bits set by button, range 0-3
 		SENSOR_TYPE_PSWITCH
 	}
 	
-	private Sensor() {
-		// use Sensor.get(num);
+	protected Sensor(int sid) {
+		this.sid = sid;
 	}
 	
 	public abstract TYPE getType();
@@ -21,22 +30,5 @@ public abstract class Sensor {
 		return sid;
 	}
 	
-	public boolean isDigital() {
-		return true;
-	}
-	
-	public boolean isAnalog() {
-		return !isDigital();
-	}
-	
-	public boolean isActive() {
-		if(isDigital()) {
-			return getValue() > 0.5f;
-		}
-		return true;
-	}
-	
-	public float getValue() {
-		return 1f;
-	}
+	public abstract int getValue();
 }

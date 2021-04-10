@@ -61,6 +61,7 @@ public class Controller implements Runnable {
 	}
 	
 	public void setSensors(List<Sensor> sensors) {
+		// keep reference, as list may be changed if new sensors are found
 		this.sensors = (sensors == null) ? Collections.emptyList() : sensors;
 	}
 	
@@ -257,18 +258,15 @@ public class Controller implements Runnable {
 			queue.clear();
 		}
 	}
-	
-
 
 	@Override
 	public void run() {
 		// handle flow sensor using polling every 1ms (maximum freq 1/(2*1ms)=500Hz)
 		flowpoll_timeout = 0;
 		
-		Controller controller = new Controller();
 		while(true) {
 			try {
-				controller.do_loop();
+				do_loop();
 
 				// The main control loop runs once every second
 				Thread.sleep(1000);
@@ -311,11 +309,7 @@ public class Controller implements Runnable {
 		//detect_binarysensor_status();
 
 		for (Sensor sensor : sensors) {
-			if (sensor.isActive()) {
-				notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getSid(), LogdataType.LOGDATA_ONOFF, 1);
-			} else {
-				notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getSid(), LogdataType.LOGDATA_ONOFF, 0);
-			}
+			notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getType().ordinal(), LogdataType.LOGDATA_ONOFF, 1);
 		}
 
 		// ====== schedule program data ======
@@ -327,13 +321,17 @@ public class Controller implements Runnable {
 			Sensor button = pswitch.get();
 			int value = (int) button.getValue();
 			if ((value & 0b11) == 0b11) {
+				logger.info("button 3");
+				logger.info("reset all zone immediate");
 				resetAllZonesImmediate(); // immediately stop all zones
 				scheduler.reset();
 			}
 			else if ((value & 0b01) != 0) {
+				logger.info("button 1");
 //					if(pd.nprograms > 0)	manual_start_program(1, 0);
 			}
 			else if ((value & 0b10) != 0) {
+				logger.info("button 2");
 //					if(pd.nprograms > 1)	manual_start_program(2, 0);
 			}
 		}
@@ -349,7 +347,7 @@ public class Controller implements Runnable {
 	}
 
 	private void heartbeat() {
-		logger.info("heartbeat");
+		logger.finest("heartbeat");
 	}
 
 	private void checkNetwork() {
