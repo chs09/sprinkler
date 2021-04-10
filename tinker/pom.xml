@@ -18,6 +18,12 @@
 		</plugins>
 	</build>
 	<dependencies>
+		<dependency>
+			<groupId>de.operatorplease</groupId>
+			<artifactId>sprinkler-controller</artifactId>
+			<version>1.0.0-SNAPSHOT</version>
+		</dependency>	
+	
 		<!-- https://mvnrepository.com/artifact/com.tinkerforge/tinkerforge -->
 		<dependency>
 			<groupId>com.tinkerforge</groupId>
