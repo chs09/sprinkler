@@ -3,7 +3,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.operatorplease</groupId>
-	<artifactId>sprinkler</artifactId>
+	<artifactId>sprinkler-tinker</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
@@ -18,12 +18,6 @@
 		</plugins>
 	</build>
 	<dependencies>
-		<!-- https://mvnrepository.com/artifact/org.shredzone.commons/commons-suncalc -->
-		<dependency>
-			<groupId>org.shredzone.commons</groupId>
-			<artifactId>commons-suncalc</artifactId>
-			<version>3.4</version>
-		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.tinkerforge/tinkerforge -->
 		<dependency>
 			<groupId>com.tinkerforge</groupId>

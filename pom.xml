@@ -5,6 +5,7 @@
 	<groupId>de.operatorplease</groupId>
 	<artifactId>sprinkler-project</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
 		<plugins>
