@@ -3,6 +3,12 @@ package de.operatorplease.sprinkler;
 public abstract class Sensor {
 	private int sid;
 	
+	public static final int BUTTON_NONE = 0;
+	public static final int BUTTON_SELECT = 1;
+	public static final int BUTTON_ENTER = 2;
+	public static final int BUTTON_ESC = 3;
+	public static final int BUTTON_MODE = 4;
+	
 	public enum TYPE {
 		SENSOR_TYPE_RAIN,
 		
@@ -16,7 +22,7 @@ public abstract class Sensor {
 		
 		SENSOR_TYPE_SOIL,
 		
-		// unit: bits set by button, range 0-3
+		// unit: bits set by button, range 0-4
 		SENSOR_TYPE_PSWITCH
 	}
 	

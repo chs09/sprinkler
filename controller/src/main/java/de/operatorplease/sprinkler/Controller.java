@@ -306,8 +306,6 @@ public class Controller implements Runnable {
 		checkRainDelay(now);
 
 		// ====== Check binary (i.e. rain or soil) sensor status ======
-		//detect_binarysensor_status();
-
 		for (Sensor sensor : sensors) {
 			notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getType().ordinal(), LogdataType.LOGDATA_ONOFF, 1);
 		}
@@ -320,19 +318,28 @@ public class Controller implements Runnable {
 		if (pswitch.isPresent()) {
 			Sensor button = pswitch.get();
 			int value = (int) button.getValue();
-			if ((value & 0b11) == 0b11) {
-				logger.info("button 3");
+			if (value == Sensor.BUTTON_ESC) {
+				logger.info("esc button");
 				logger.info("reset all zone immediate");
 				resetAllZonesImmediate(); // immediately stop all zones
 				scheduler.reset();
 			}
-			else if ((value & 0b01) != 0) {
-				logger.info("button 1");
+			else if (value == Sensor.BUTTON_SELECT) {
+				logger.info("select button");
+				// iterate plans
+				
+				// idea: press long to change mode, e.g. iterate stations
 //					if(pd.nprograms > 0)	manual_start_program(1, 0);
 			}
-			else if ((value & 0b10) != 0) {
-				logger.info("button 2");
+			else if (value == Sensor.BUTTON_ENTER) {
+				// enter button
+				
+				// idea: press long to exit manual mode
+				logger.info("enter button");
 //					if(pd.nprograms > 1)	manual_start_program(2, 0);
+			}
+			else if (value == Sensor.BUTTON_MODE) {
+				logger.info("mode button");
 			}
 		}
 		
