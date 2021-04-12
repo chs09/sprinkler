@@ -11,9 +11,7 @@ public abstract class Station {
 		this.zone = Objects.requireNonNull(zone, "Zone cannot be null!");
 	}
 	
-	public boolean isActive() {
-		return false;
-	}
+	public abstract boolean isActive();
 	
 	public boolean isDisabled() {
 		return zone.isDisabled();
@@ -25,9 +23,11 @@ public abstract class Station {
 	
 	public abstract void stop();
 	public abstract void start();
+	protected abstract void toggle();
 	
 	@Override
 	public String toString() {
 		return "Station[" + zone.getZid() + "]";
 	}
+
 }

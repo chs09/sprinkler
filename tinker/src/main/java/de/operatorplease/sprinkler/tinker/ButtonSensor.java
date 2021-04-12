@@ -13,8 +13,8 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 	private AtomicInteger state = new AtomicInteger();
 
 	private final Thread btnDebounceThread = new Thread("Button-Debounce-Thread") {
-		private final int DELAY_MILLIS = 100;
-		private final int HOLD_THRESHOLD = 3;
+		private final int DELAY_MILLIS = 50;
+		private final int HOLD_THRESHOLD = 6;
 		
 		public void run() {
 			while(true) try {
@@ -23,37 +23,42 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 					current = state.get();
 					if(current == 0) {
 						System.out.println("sleeping");
-						value.set(0);
 						state.wait();
 					}
 				}
 				System.out.println("awake");
 				int count = 0;
-				current = state.get();
+				if(current == 0) {
+					current = state.get();
+				}
 				while(current != 0) {
 					Thread.sleep(DELAY_MILLIS);
 					int now = state.get();
+					
+					if(now == BUTTON_SELECT && count >= HOLD_THRESHOLD) {
+						// If the button is held down, the button code changes to 
+						// BUTTON_MODE after 300ms
+						now = current = BUTTON_MODE;
+					}
+					
+					System.out.println(current + " " + now);
+					
 					// after 100ms the value must still be stable to be 
 					// considered sure that the key code does not change anymore
 					if(now == current) {
-						count++;
-						if(now == BUTTON_SELECT && count >= HOLD_THRESHOLD) {
-							// If the button is held down, the button code changes to 
-							// BUTTON_MODE after 300ms
-							now = current = BUTTON_MODE;
-						}
-						if(count == HOLD_THRESHOLD) {
+						if( count == HOLD_THRESHOLD ) {
 							// Trigger anyway (even if the key is held) after 3 passes (300ms)
 							System.out.println("debounced value " + now + " (hold)");
 							value.set(current);
 						}
+						count++;
 					} else {
 						// set value when releasing the key if at least one debounce 
 						// cycle has been run through
 						if(count != 0) {
 							// if count >= 3, then the event has already been triggered
 							if(count < HOLD_THRESHOLD) {
-								System.out.println("debounced value " + now);
+								System.out.println("debounced value " + current);
 								value.set(current);
 							}
 						}
@@ -85,7 +90,10 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 
 	@Override
 	public int getValue() {
-		return value.getAndSet(0);
+		int value = this.value.getAndSet(0);
+		if(value != 0)
+		System.out.println("get " + value);
+		return value;
 	}
 	
 	@Override

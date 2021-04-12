@@ -5,14 +5,17 @@ import static de.operatorplease.sprinkler.Notifier.MessageType.NOTIFY_PROGRAM_SC
 import static de.operatorplease.sprinkler.Notifier.MessageType.NOTIFY_RAINDELAY;
 import static de.operatorplease.sprinkler.Sensor.TYPE.SENSOR_TYPE_FLOW;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,10 +29,9 @@ import de.operatorplease.sprinkler.settings.Plan;
 public class Controller implements Runnable {
 	private final Logger logger = Logger.getLogger(Controller.class.getName());
 	
-	private long flowpoll_timeout;
-	
 	private LocalDateTime next_weather_check;
 	private LocalDateTime rd_stop_time;
+	private LocalDateTime resetModeAfter;
 
 	private final Notifier notifier = new Notifier();
 	private final Scheduler scheduler = new Scheduler();
@@ -70,6 +72,7 @@ public class Controller implements Runnable {
 	}
 	
 	private void resetAllZonesImmediate() {
+		logger.info("reset all zone immediate");
 		for (Station zone : stations) {
 			zone.stop();
 		}
@@ -97,8 +100,15 @@ public class Controller implements Runnable {
 		}
 	}
 	
-	private void flowPoll() {
+	private void flowPoll(LocalDateTime now) {
+		// check flow sensor
+		Optional<Sensor> flowSensor = sensors.stream()
+				.filter(s -> s.getType() == SENSOR_TYPE_FLOW)
+				.findFirst();
 
+		if (flowSensor.isPresent()) {
+			// TODO
+		}
 	}
 	
 	class Scheduler {
@@ -167,6 +177,7 @@ public class Controller implements Runnable {
 				return;
 			}
 			status.programRunning = runningProgram.getPlan();
+			status.program = "PRG" + runningProgram.getPid();
 			
 			for(Entry<Integer, Short> entry: runningProgram.getDurations()) {
 				int zid = entry.getKey();
@@ -254,6 +265,7 @@ public class Controller implements Runnable {
 		}
 
 		public void reset() {
+			logger.info("reset scheduler");
 			runningProgram = null;
 			queue.clear();
 		}
@@ -261,15 +273,24 @@ public class Controller implements Runnable {
 
 	@Override
 	public void run() {
-		// handle flow sensor using polling every 1ms (maximum freq 1/(2*1ms)=500Hz)
-		flowpoll_timeout = 0;
-		
+		long[] durations = new long[10];
+		int cycle = 0;
 		while(true) {
 			try {
+				Thread.sleep(300);
+
+				// The main control loop
+				long start = System.currentTimeMillis();
 				do_loop();
 
-				// The main control loop runs once every second
-				Thread.sleep(1000);
+				// calc avg loop time
+				durations[cycle++] = System.currentTimeMillis()-start;
+				if(cycle == durations.length) {
+					OptionalDouble avg = Arrays.stream(durations).average();
+					double avgTime = avg.getAsDouble();
+					logger.log((avgTime > 30) ? Level.WARNING : Level.FINE, "avg main cycle time "+ avgTime + "ms.");
+					cycle = 0;
+				}
 			} catch (InterruptedException e) {
 				logger.log(Level.SEVERE, "interrupted");
 				return;
@@ -278,30 +299,146 @@ public class Controller implements Runnable {
 			}
 		}
 	}
+	
+	public enum Mode {
+		AUTOMATIC,
+		PAUSED,
+		ITERATE_PROGRAMS,
+		ITERATE_STATIONS
+	}
+	
+	private final State state = new State();
+	private class State {
+		int index = 0;
+		private Mode __mode = Mode.AUTOMATIC;
 		
-	private void do_loop() {
-		// check flow sensor
-		Optional<Sensor> flowSensor = sensors.stream()
-				.filter(s -> s.getType() == SENSOR_TYPE_FLOW)
-				.findFirst();
+		public State() {
+			setMode(Mode.AUTOMATIC);
+		}
 		
-		if (flowSensor.isPresent()) {
-			long curr = System.currentTimeMillis();
-			if (curr != flowpoll_timeout) {
-				flowpoll_timeout = curr;
-				flowPoll();
+		public Mode getMode() {
+			if(resetModeAfter != null && resetModeAfter.isBefore(clock.now())) {
+				setMode(Mode.AUTOMATIC);
+			}
+			return __mode;
+		}
+		
+		public void setMode(Mode mode) {
+			if(mode != Mode.PAUSED || (mode != Mode.AUTOMATIC && __mode != Mode.PAUSED)) {
+				scheduler.reset();
+			}
+			
+			__mode = mode;
+			if(mode == Mode.PAUSED) {
+				resetModeAfter = clock.now().plusMinutes(5);
+			} else if(mode == Mode.AUTOMATIC) {
+				resetModeAfter = null;
+			} else {
+				resetModeAfter = clock.now().plusHours(2);
+			}
+			
+			resetAllZonesImmediate();
+			switch(mode) {
+			case AUTOMATIC: status.mode = 'A'; break;
+			case ITERATE_PROGRAMS: status.mode = 'M'; break;
+			case ITERATE_STATIONS: status.mode = 'S'; break;
+			case PAUSED: status.mode = 'P'; break;
+			}
+			index = -1;
+			next();
+		}
+		
+		public void toggle() {
+			switch(__mode) {
+			case AUTOMATIC: state.setMode(Mode.ITERATE_PROGRAMS); break;
+			case ITERATE_PROGRAMS: state.setMode(Mode.ITERATE_STATIONS); break;
+			case ITERATE_STATIONS: state.setMode(Mode.ITERATE_PROGRAMS); break;
+			default: state.setMode(Mode.PAUSED); break;
+			case PAUSED: state.setMode(Mode.ITERATE_PROGRAMS);
+ 			}
+		}
+		
+		public void next() {
+			index++;
+			if(__mode == Mode.ITERATE_PROGRAMS) {
+				index = !programs.isEmpty() ? index % programs.size() : -1;
+				status.program = "PRG" + index; // TODO use program pid
+			} else if(__mode == Mode.ITERATE_STATIONS) {
+				index = !stations.isEmpty() ? index % stations.size() : -1;
+				status.program = "VLV" + index;
+			} else {
+				index = -1;
+				status.program = "";
 			}
 		}
-
+		
+		public void exec() {
+			if(__mode == Mode.ITERATE_PROGRAMS) {
+				if(programs.size() > state.index) {
+					scheduler.reset();
+					scheduler.add(programs.get(state.index));
+					setMode(Mode.AUTOMATIC);
+				}
+			}
+			else if(__mode == Mode.ITERATE_STATIONS) {
+				if(stations.size() > state.index) {
+					Station station = stations.get(state.index);
+					if(!station.isDisabled()) {
+						station.toggle();
+					}
+				}
+			} else {
+				setMode(Mode.PAUSED);
+			}
+		}
+	}
+	
+	private void handleButton(int which) {
+		if (which == Sensor.BUTTON_NONE) {
+			return;
+		}
+		
+		status.lastUserInput = System.currentTimeMillis();
+		
+		if (which == Sensor.BUTTON_ESC) {
+			logger.info("esc button");
+			if(state.getMode() == Mode.AUTOMATIC) {
+				scheduler.reset();
+				state.setMode(Mode.PAUSED);
+			} else {
+				state.setMode(Mode.AUTOMATIC);
+			}
+		}
+		else if (which == Sensor.BUTTON_MODE) {
+			logger.info("mode button");
+			state.toggle();
+		}
+		else if (which == Sensor.BUTTON_SELECT) {
+			logger.info("select button");
+			state.next();
+		}
+		else if (which == Sensor.BUTTON_ENTER) {
+			logger.info("enter button");
+			state.exec();
+		}
+	}
+	
+	private void do_loop() {
 		heartbeat();
 
 		final LocalDateTime now = clock.now();
 
+		// ===== Check program switch status =====
+		checkButtons();
+		
 		if (display != null) {
 			display.printTime(now);
 			display.updateStatus(status);
 		}
 
+		// ====== Check flow sensor, if preset ======
+		flowPoll(now);
+		
 		// ====== Check rain delay status ======
 		checkRainDelay(now);
 
@@ -310,37 +447,15 @@ public class Controller implements Runnable {
 			notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getType().ordinal(), LogdataType.LOGDATA_ONOFF, 1);
 		}
 
-		// ====== schedule program data ======
-		scheduler.schedule(now);
+		if(resetModeAfter != null && resetModeAfter.isAfter(now)) {
+			status.duration = Duration.between(now, resetModeAfter);
+		} else {
+			status.duration = null;
+		}
 		
-		// ===== Check program switch status =====
-		Optional<Sensor> pswitch = sensors.stream().filter(s -> s.getType() == TYPE.SENSOR_TYPE_PSWITCH).findFirst();
-		if (pswitch.isPresent()) {
-			Sensor button = pswitch.get();
-			int value = (int) button.getValue();
-			if (value == Sensor.BUTTON_ESC) {
-				logger.info("esc button");
-				logger.info("reset all zone immediate");
-				resetAllZonesImmediate(); // immediately stop all zones
-				scheduler.reset();
-			}
-			else if (value == Sensor.BUTTON_SELECT) {
-				logger.info("select button");
-				// iterate plans
-				
-				// idea: press long to change mode, e.g. iterate stations
-//					if(pd.nprograms > 0)	manual_start_program(1, 0);
-			}
-			else if (value == Sensor.BUTTON_ENTER) {
-				// enter button
-				
-				// idea: press long to exit manual mode
-				logger.info("enter button");
-//					if(pd.nprograms > 1)	manual_start_program(2, 0);
-			}
-			else if (value == Sensor.BUTTON_MODE) {
-				logger.info("mode button");
-			}
+		// ====== schedule program data ======
+		if(state.getMode() == Mode.AUTOMATIC) {
+			scheduler.schedule(now);
 		}
 		
 		// ====== check network connection ====== 
@@ -357,6 +472,15 @@ public class Controller implements Runnable {
 		logger.finest("heartbeat");
 	}
 
+	private void checkButtons() {
+		// ===== Check program switch status =====
+		Optional<Sensor> pswitch = sensors.stream().filter(s -> s.getType() == TYPE.SENSOR_TYPE_PSWITCH).findFirst();
+		if (pswitch.isPresent()) {
+			Sensor button = pswitch.get();
+			handleButton(button.getValue());
+		}
+	}
+	
 	private void checkNetwork() {
 		// TODO Auto-generated method stub
 		status.networkAvailable = true;
