@@ -1,11 +1,10 @@
 package de.operatorplease.sprinkler.settings;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 public class Plan {
 	private int pid;
@@ -90,8 +89,8 @@ public class Plan {
 		durations.put(zone.getZid(), minutes);
 	}
 	
-	public Set<Entry<Integer, Short>> getDurations() {
-		return durations.entrySet();
+	public Map<Integer, Short> getDurations() {
+		return Collections.unmodifiableMap(durations);
 	}
 	
 	public boolean isEnabled() {

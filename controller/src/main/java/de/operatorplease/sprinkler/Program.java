@@ -8,17 +8,17 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.Map.Entry;
 
 import org.shredzone.commons.suncalc.SunTimes;
 
 import de.operatorplease.sprinkler.settings.Plan;
-import de.operatorplease.sprinkler.settings.StartTime;
 import de.operatorplease.sprinkler.settings.Plan.EvenOddRestriction;
 import de.operatorplease.sprinkler.settings.Settings;
+import de.operatorplease.sprinkler.settings.StartTime;
 
 class Program {
 	private LocalTime sunrise = LocalTime.of(7, 0);
@@ -236,7 +236,8 @@ class Program {
 		return plan;
 	}
 
-	public Set<Entry<Integer, Short>> getDurations() {
-		return plan.getDurations();
+	public Map<Integer, Short> getDurations() {
+		Map<Integer, Short> map = plan.getDurations();
+		return map == null ? Collections.emptyMap() : map;
 	}
 }

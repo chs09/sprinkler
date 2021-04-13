@@ -10,12 +10,15 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,7 +45,7 @@ public class Controller implements Runnable {
 	private Clock clock = new Clock();
 	private List<Sensor> sensors = Collections.emptyList();
 	private List<Program> programs = Collections.emptyList();
-	private List<Station> stations = Collections.emptyList();
+	private Map<Integer, Station> stations = new HashMap<>();
 
 	public void setDisplay(Display display) {
 		this.display = display;
@@ -58,7 +61,9 @@ public class Controller implements Runnable {
 	
 	public void setStations(List<Station> stations) {
 		if(stations != null) {
-			this.stations = stations;
+			for(Station st: stations) {
+				this.stations.put(st.getZoneId(), st);
+			}
 		}
 	}
 	
@@ -73,7 +78,7 @@ public class Controller implements Runnable {
 	
 	private void resetAllZonesImmediate() {
 		logger.info("reset all zone immediate");
-		for (Station zone : stations) {
+		for (Station zone : stations.values()) {
 			zone.stop();
 		}
 	}
@@ -146,7 +151,7 @@ public class Controller implements Runnable {
 						turnOn(q.zone);
 					} // if curr_time > scheduled_start_time
 				}
-				handleMainValve(runningProgram);
+				handleMainValve();
 				
 				long numberOfZonesRunning = queue.stream().filter(q -> q.start > 0).count();
 				if(numberOfZonesRunning == 0 && !queue.isEmpty()) {
@@ -162,7 +167,7 @@ public class Controller implements Runnable {
 //						(flow_count > os.flowcount_log_start) ? (flow_count - os.flowcount_log_start) : 0);
 //			}
 				
-				handleMainValve(runningProgram);
+				handleMainValve();
 			} // if_some_program_is_running
 			
 			if(!queue.isEmpty()) {
@@ -179,17 +184,16 @@ public class Controller implements Runnable {
 			status.programRunning = runningProgram.getPlan();
 			status.program = "PRG" + runningProgram.getPid();
 			
-			for(Entry<Integer, Short> entry: runningProgram.getDurations()) {
+			for(Entry<Integer, Short> entry: runningProgram.getDurations().entrySet()) {
 				int zid = entry.getKey();
 				int duration = entry.getValue();
 				
-				Optional<Station> zone = stations.stream().filter(s -> s.getZoneId() == zid).findFirst();
-				if (zone.isEmpty()) {
+				Station station = stations.get(zid);
+				if (station == null) {
 					logger.warning("Zone " + zid + " not available.");
 					continue;
 				}
 				
-				Station station = zone.get();
 				if(station.isDisabled()) {
 					continue;
 				}
@@ -496,28 +500,47 @@ public class Controller implements Runnable {
 		zone.stop();
 	}
 
-	private void handleMainValve(Program runningProgram) {
-		Integer mainValveId = runningProgram.getMainValveId();
-		if(mainValveId == null) {
+	private void handleMainValve() {
+		Map<Integer, Set<Integer>> map = programs.stream()
+				.filter(p -> Objects.nonNull(p.getMainValveId()))
+				.collect(Collectors.toMap(Program::getMainValveId, p -> p.getDurations().keySet()));
+		
+		if(map.isEmpty()) {
 			return;
 		}
 		
-		Optional<Station> zone = stations.stream().filter(s -> s.getZoneId() == mainValveId).findFirst();
-		if(zone.isEmpty()) {
-			return;
-		}
+		for(Entry<Integer, Set<Integer>> entry: map.entrySet()) {
+			Integer mainValveId = entry.getKey();
 
-		Station main = zone.get();
-		boolean running = stations.stream()
-				.anyMatch( s -> s.isActive() && s.getZoneId() != mainValveId );
-
-		if(running) {
-			if(!main.isActive()) {
-				turnOn(main);
+			if(mainValveId == null) {
+				// no main station assigned
+				continue;
 			}
-		} else {
-			if(main.isActive()) {
-				turnOff(main);
+
+			Station main = stations.get(mainValveId);
+			if(main == null) {
+				// should not happen
+				logger.warning("Main station " + mainValveId + " not found.");
+				continue;
+			}
+			
+			boolean running = false;
+			for(Integer id: entry.getValue()) {
+				Station station = stations.get(id);
+				if(station != null && station.isActive()) {
+					running = true;
+					break;
+				}
+			}
+
+			if(running) {
+				if(!main.isActive()) {
+					turnOn(main);
+				}
+			} else {
+				if(main.isActive()) {
+					turnOff(main);
+				}
 			}
 		}
 	}
