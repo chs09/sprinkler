@@ -1,14 +1,14 @@
 package de.operatorplease.sprinkler.settings;
 
 public class Zone {
-	private int zid;
+	private String zid;
 	private boolean disabled;
 	
-	public Zone(int zid) {
-		this.zid = zid;
+	public Zone(String uid) {
+		this.zid = uid;
 	}
 	
-	public int getZid() {
+	public String getZid() {
 		return zid;
 	}
 	

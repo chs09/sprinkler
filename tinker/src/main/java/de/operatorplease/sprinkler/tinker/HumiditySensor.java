@@ -9,7 +9,7 @@ public class HumiditySensor extends Sensor implements BrickletHumidityV2.Humidit
 	private BrickletHumidityV2 brickletHumidityV2;
 
 	public HumiditySensor(BrickletHumidityV2 brickletHumidityV2) throws TinkerforgeException {
-		super(brickletHumidityV2.getIdentity().deviceIdentifier);
+		super(Uid.of(brickletHumidityV2.getIdentity(), 1));
 		this.brickletHumidityV2 = brickletHumidityV2;
 		this.brickletHumidityV2.setHumidityCallbackConfiguration(60_000, false, 'x', 0, 10_000);
 		this.brickletHumidityV2.addHumidityListener(this);

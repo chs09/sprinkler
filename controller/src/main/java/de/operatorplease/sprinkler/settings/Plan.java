@@ -41,17 +41,17 @@ public class Plan {
 	// interval in minutes if repeat == true
 	private int delay = 0;
 
-	private final Map<Integer, Short> durations = new HashMap<>(); // duration / water time of each zone
+	private final Map<String, Short> durations = new HashMap<>(); // duration / water time of each zone
 
-	private Integer mainValve = null;
+	private String mainValve = null;
 	
 	private String name;
 
-	public Integer getMainValve() {
+	public String getMainValve() {
 		return mainValve;
 	}
 	
-	public void setMainValve(Integer mainValve) {
+	public void setMainValve(String mainValve) {
 		this.mainValve = mainValve;
 	}
 	
@@ -89,7 +89,7 @@ public class Plan {
 		durations.put(zone.getZid(), minutes);
 	}
 	
-	public Map<Integer, Short> getDurations() {
+	public Map<String, Short> getDurations() {
 		return Collections.unmodifiableMap(durations);
 	}
 	

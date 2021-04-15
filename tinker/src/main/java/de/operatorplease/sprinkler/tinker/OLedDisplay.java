@@ -54,12 +54,11 @@ public class OLedDisplay extends Display {
 			if(alwaysOn) {
 				lastActivation = System.currentTimeMillis();
 			} 
-			else if(status.hashCode() != lastStatusHashCode) {
-				off.set(false);
-				lastActivation = System.currentTimeMillis();
-			}
 			else if(status.lastUserInput > lastActivation) {
 				lastActivation = status.lastUserInput;
+			}
+			else if(status.hashCode() != lastStatusHashCode) {
+				lastActivation = System.currentTimeMillis();
 			}
 			
 			if(lastActivation + TIMEOUT < System.currentTimeMillis()) {

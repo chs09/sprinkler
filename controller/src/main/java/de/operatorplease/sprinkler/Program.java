@@ -29,7 +29,7 @@ class Program {
 	private final Plan plan;
 	
 	// main valve; cannot be changed after instantiation, program has to be reloaded
-	private final Integer mainValveId;
+	private final String mainValveId;
 	
 	public Program(Plan plan) {
 		this.plan = Objects.requireNonNull(plan, "Plan should not be null");
@@ -228,7 +228,7 @@ class Program {
 		return plan.getPid();
 	}
 	
-	public Integer getMainValveId() {
+	public String getMainValveId() {
 		return mainValveId;
 	}
 	
@@ -236,8 +236,8 @@ class Program {
 		return plan;
 	}
 
-	public Map<Integer, Short> getDurations() {
-		Map<Integer, Short> map = plan.getDurations();
+	public Map<String, Short> getDurations() {
+		Map<String, Short> map = plan.getDurations();
 		return map == null ? Collections.emptyMap() : map;
 	}
 }

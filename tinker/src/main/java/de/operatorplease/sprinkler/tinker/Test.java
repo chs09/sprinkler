@@ -2,17 +2,15 @@ package de.operatorplease.sprinkler.tinker;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.tinkerforge.BrickletDualButtonV2;
 import com.tinkerforge.BrickletHumidityV2;
+import com.tinkerforge.BrickletIndustrialQuadRelayV2;
 import com.tinkerforge.BrickletOLED128x64V2;
 import com.tinkerforge.IPConnection;
 
 import de.operatorplease.sprinkler.Clock;
 import de.operatorplease.sprinkler.Controller;
-import de.operatorplease.sprinkler.Sensor;
 
 public class Test {
 	private static final String HOST = "192.168.178.50";
@@ -24,12 +22,10 @@ public class Test {
 		new Test().run();
 	}
 	
-	private final List<Sensor> sensors = new CopyOnWriteArrayList<>();
 	private Controller controller;
 	
 	private void run() {
 		controller = new Controller();
-		controller.setSensors(sensors);
 		
 		ipcon = new IPConnection();
 		while(true) {
@@ -77,15 +73,16 @@ public class Test {
 		//controller.setZones(null, null);
 		//controller.setPrograms(null);
 
-		controller.run();
 		try {
+			controller.run();
 			System.out.println("Press key to exit"); System.in.read();
-		} catch(java.io.IOException e) {
-		}
-
-		try {
-			ipcon.disconnect();
-		} catch(com.tinkerforge.NotConnectedException e) {
+		} catch(Exception e) {
+			
+		} finally {
+			try {
+				ipcon.disconnect();
+			} catch(com.tinkerforge.NotConnectedException e) {
+			}
 		}
 	}
 	
@@ -112,8 +109,8 @@ public class Test {
 				} else if(deviceIdentifier == BrickletHumidityV2.DEVICE_IDENTIFIER) {
 					try {
 						BrickletHumidityV2 brickletHumidityV2 = new BrickletHumidityV2(uid, ipcon);
-						sensors.add(new HumiditySensor(brickletHumidityV2));
-						sensors.add(new TemperatureSensor(brickletHumidityV2));
+						controller.addSensor(new HumiditySensor(brickletHumidityV2));
+						controller.addSensor(new TemperatureSensor(brickletHumidityV2));
 						System.out.println("Humidity 2.0 initialized");
 					} catch(com.tinkerforge.TinkerforgeException e) {
 						System.out.println("Humidity 2.0 init failed: " + e);
@@ -130,15 +127,27 @@ public class Test {
 //					}
 				} else if(deviceIdentifier == BrickletDualButtonV2.DEVICE_IDENTIFIER) {
 					try {
-						BrickletDualButtonV2 brickletDualButtonV2 = new BrickletDualButtonV2(uid, ipcon);
-						ButtonSensor buttonSensor = new ButtonSensor(brickletDualButtonV2);
+						BrickletDualButtonV2 bricklet = new BrickletDualButtonV2(uid, ipcon);
+						ButtonSensor buttonSensor = new ButtonSensor(bricklet);
 						System.out.println("Dual Button 2.0 initialized " + deviceIdentifier);
 						
-						sensors.add(buttonSensor);
+						controller.addSensor(buttonSensor);
+					} catch(com.tinkerforge.TinkerforgeException e) {
+						System.out.println("Dual Button 2.0 init failed: " + e);
+					}
+				} else if(deviceIdentifier == BrickletIndustrialQuadRelayV2.DEVICE_IDENTIFIER) {
+					try {
+						BrickletIndustrialQuadRelayV2 bricklet = new BrickletIndustrialQuadRelayV2(uid, ipcon);
+						bricklet.setStatusLEDConfig(BrickletIndustrialQuadRelayV2.STATUS_LED_CONFIG_OFF);
+						QuadStationRelay stationRelay = new QuadStationRelay(bricklet);
+						System.out.println("Quad Relay 2.0 initialized " + deviceIdentifier);
+
+						controller.addStations(stationRelay.getStations());
 					} catch(com.tinkerforge.TinkerforgeException e) {
 						System.out.println("Dual Button 2.0 init failed: " + e);
 					}
 				}
+
 			}
 		}
 

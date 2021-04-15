@@ -17,7 +17,7 @@ public abstract class Station {
 		return zone.isDisabled();
 	}
 	
-	public int getZoneId() {
+	public String getZoneId() {
 		return zone.getZid();
 	}
 	

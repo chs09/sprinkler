@@ -1,6 +1,8 @@
 package de.operatorplease.sprinkler.tinker;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.tinkerforge.BrickletDualButtonV2;
 import com.tinkerforge.TinkerforgeException;
@@ -8,13 +10,15 @@ import com.tinkerforge.TinkerforgeException;
 import de.operatorplease.sprinkler.Sensor;
 
 public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateChangedListener {
+	private final Logger logger = Logger.getLogger(ButtonSensor.class.getTypeName());
+	
 	private BrickletDualButtonV2 brickletDualButtonV2;
 	private AtomicInteger value = new AtomicInteger();
 	private AtomicInteger state = new AtomicInteger();
 
 	private final Thread btnDebounceThread = new Thread("Button-Debounce-Thread") {
-		private final int DELAY_MILLIS = 50;
-		private final int HOLD_THRESHOLD = 6;
+		private final int DELAY_MILLIS = 10;
+		private final int HOLD_THRESHOLD = 30;
 		
 		public void run() {
 			while(true) try {
@@ -22,11 +26,11 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 				synchronized(state) {
 					current = state.get();
 					if(current == 0) {
-						System.out.println("sleeping");
+						logger.finest("sleeping");
 						state.wait();
 					}
 				}
-				System.out.println("awake");
+				logger.finest("awake");
 				int count = 0;
 				if(current == 0) {
 					current = state.get();
@@ -41,24 +45,24 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 						now = current = BUTTON_MODE;
 					}
 					
-					System.out.println(current + " " + now);
+					logger.finest("key check " + current + " " + now);
 					
 					// after 100ms the value must still be stable to be 
 					// considered sure that the key code does not change anymore
 					if(now == current) {
 						if( count == HOLD_THRESHOLD ) {
 							// Trigger anyway (even if the key is held) after 3 passes (300ms)
-							System.out.println("debounced value " + now + " (hold)");
+							logger.info("debounced key " + now + " (hold)");
 							value.set(current);
 						}
 						count++;
 					} else {
-						// set value when releasing the key if at least one debounce 
+						// set value when releasing the key if at least two debounce 
 						// cycle has been run through
-						if(count != 0) {
-							// if count >= 3, then the event has already been triggered
+						if(count > 1) {
+							// if count >= THRESHOLD, then the event has already been triggered
 							if(count < HOLD_THRESHOLD) {
-								System.out.println("debounced value " + current);
+								logger.info("debounced key " + current);
 								value.set(current);
 							}
 						}
@@ -68,14 +72,14 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 					}
 				}
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				logger.log(Level.SEVERE, "key debounce thread stopped due to interruption", e);
 				return;
 			}
 		};
 	};
 	
 	public ButtonSensor(BrickletDualButtonV2 brickletDualButtonV2) throws TinkerforgeException {
-		super(brickletDualButtonV2.getIdentity().deviceIdentifier);
+		super(Uid.of(brickletDualButtonV2.getIdentity()));
 		this.brickletDualButtonV2 = brickletDualButtonV2;
 		this.brickletDualButtonV2.setStateChangedCallbackConfiguration(true);
 		this.brickletDualButtonV2.addStateChangedListener(this);
@@ -90,16 +94,12 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 
 	@Override
 	public int getValue() {
-		int value = this.value.getAndSet(0);
-		if(value != 0)
-		System.out.println("get " + value);
-		return value;
+		return this.value.getAndSet(0);
 	}
 	
 	@Override
 	public void stateChanged(int buttonL, int buttonR, int ledL, int ledR) {
-		String text = String.format("Button L=%d R=%d", buttonL, buttonR);
-		
+		String text = String.format("Button L=%b R=%b", buttonL == 0, buttonR == 0);
 		synchronized(state) {
 			if(buttonL == 0 && buttonR == 0) {
 				state.set(BUTTON_ESC);
@@ -116,6 +116,6 @@ public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateCh
 			brickletDualButtonV2.setLEDState(1, 1);
 		} catch (com.tinkerforge.TinkerforgeException e) {
 		}
-		System.out.println(System.currentTimeMillis() + ": " + text);
+		logger.fine(text);
 	}
 }

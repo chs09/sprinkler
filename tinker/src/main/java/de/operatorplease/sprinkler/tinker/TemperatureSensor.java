@@ -9,7 +9,7 @@ public class TemperatureSensor extends Sensor implements BrickletHumidityV2.Temp
 	private BrickletHumidityV2 brickletHumidityV2;
 
 	public TemperatureSensor(BrickletHumidityV2 brickletHumidityV2) throws TinkerforgeException {
-		super(brickletHumidityV2.getIdentity().deviceIdentifier);
+		super(Uid.of(brickletHumidityV2.getIdentity(), 1));
 		this.brickletHumidityV2 = brickletHumidityV2;
 		this.brickletHumidityV2.setTemperatureCallbackConfiguration(60000, false, 'x', -4000, 16500);
 		this.brickletHumidityV2.addTemperatureListener(this);

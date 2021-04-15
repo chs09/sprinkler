@@ -1,7 +1,7 @@
 package de.operatorplease.sprinkler;
 
 public abstract class Sensor {
-	private int sid;
+	private String sid;
 	
 	public static final int BUTTON_NONE = 0;
 	public static final int BUTTON_SELECT = 1;
@@ -26,13 +26,13 @@ public abstract class Sensor {
 		SENSOR_TYPE_PSWITCH
 	}
 	
-	protected Sensor(int sid) {
+	protected Sensor(String sid) {
 		this.sid = sid;
 	}
 	
 	public abstract TYPE getType();
 
-	public int getSid() {
+	public String getSid() {
 		return sid;
 	}
 	

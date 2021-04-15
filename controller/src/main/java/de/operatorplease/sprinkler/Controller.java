@@ -8,9 +8,9 @@ import static de.operatorplease.sprinkler.Sensor.TYPE.SENSOR_TYPE_FLOW;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +19,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,7 +32,7 @@ import de.operatorplease.sprinkler.Sensor.TYPE;
 import de.operatorplease.sprinkler.settings.Plan;
 
 public class Controller implements Runnable {
-	private final Logger logger = Logger.getLogger(Controller.class.getName());
+	private final Logger logger = Logger.getLogger(Controller.class.getTypeName());
 	
 	private LocalDateTime next_weather_check;
 	private LocalDateTime rd_stop_time;
@@ -43,9 +45,10 @@ public class Controller implements Runnable {
 	private Display display = new Display();
 	private Weather weather = new Weather();
 	private Clock clock = new Clock();
-	private List<Sensor> sensors = Collections.emptyList();
-	private List<Program> programs = Collections.emptyList();
-	private Map<Integer, Station> stations = new HashMap<>();
+	
+	private final List<Sensor> sensors = new CopyOnWriteArrayList<>();
+	private final List<Program> programs = new CopyOnWriteArrayList<>();
+	private final Map<String, Station> stations = new ConcurrentHashMap<>();
 
 	public void setDisplay(Display display) {
 		this.display = display;
@@ -59,21 +62,34 @@ public class Controller implements Runnable {
 		this.clock = Objects.requireNonNull(clock);
 	}
 	
-	public void setStations(List<Station> stations) {
-		if(stations != null) {
-			for(Station st: stations) {
-				this.stations.put(st.getZoneId(), st);
-			}
+	public void addStation(Station station) {
+		if(station != null) {
+			this.stations.put(station.getZoneId(), station);
 		}
 	}
 	
-	public void setSensors(List<Sensor> sensors) {
-		// keep reference, as list may be changed if new sensors are found
-		this.sensors = (sensors == null) ? Collections.emptyList() : sensors;
+	public void addStations(List<Station> stations) {
+		if(stations != null) {
+			stations.forEach(this::addStation);
+		}
 	}
 	
-	public void setPrograms(List<Plan> programs) {
-		this.programs = programs == null ? Collections.emptyList() : programs.stream().map(p -> new Program(p)).collect(Collectors.toList());
+	public void addSensor(Sensor sensor) {
+		if(sensor != null) {
+			this.sensors.removeIf(s -> Objects.equals(s.getSid(), sensor.getSid()));
+			this.sensors.add(sensor);
+		}
+	}
+	
+	public void addSensors(List<Sensor> sensors) {
+		if(sensors != null) {
+			sensors.forEach(this::addSensor);
+		}
+	}
+	
+	public void setPlans(List<Plan> programs) {
+		this.programs.clear();
+		programs.forEach(plan -> this.programs.add(new Program(plan)));
 	}
 	
 	private void resetAllZonesImmediate() {
@@ -184,8 +200,8 @@ public class Controller implements Runnable {
 			status.programRunning = runningProgram.getPlan();
 			status.program = "PRG" + runningProgram.getPid();
 			
-			for(Entry<Integer, Short> entry: runningProgram.getDurations().entrySet()) {
-				int zid = entry.getKey();
+			for(Entry<String, Short> entry: runningProgram.getDurations().entrySet()) {
+				String zid = entry.getKey();
 				int duration = entry.getValue();
 				
 				Station station = stations.get(zid);
@@ -237,6 +253,7 @@ public class Controller implements Runnable {
 		private void add(Program prog) {
 			// skip program if already assigned
 			if(runningProgram != prog && !pendingPrograms.contains(prog)) {
+				logger.info("selected program " + prog.getPid());
 				pendingPrograms.add(prog);
 				notifier.push_message(NOTIFY_PROGRAM_SCHED, prog.getPid(), LogdataType.LOGDATA_NONE, 0);
 			}
@@ -253,7 +270,7 @@ public class Controller implements Runnable {
 			if (curr_minute != last_minute) {
 				last_minute = curr_minute;
 				
-				logger.info(now + " checking " + programs.size() + " programs");
+				logger.fine(now + " checking " + programs.size() + " programs");
 				
 				// check through all programs
 				for (Program prog : programs) {
@@ -385,8 +402,10 @@ public class Controller implements Runnable {
 				}
 			}
 			else if(__mode == Mode.ITERATE_STATIONS) {
-				if(stations.size() > state.index) {
-					Station station = stations.get(state.index);
+				ArrayList<Station> list = new ArrayList<>(stations.values());
+				if(list.size() > state.index) {
+					list.sort(Comparator.comparing(Station::getZoneId));
+					Station station = list.get(state.index);
 					if(!station.isDisabled()) {
 						station.toggle();
 					}
@@ -501,7 +520,7 @@ public class Controller implements Runnable {
 	}
 
 	private void handleMainValve() {
-		Map<Integer, Set<Integer>> map = programs.stream()
+		Map<String, Set<String>> map = programs.stream()
 				.filter(p -> Objects.nonNull(p.getMainValveId()))
 				.collect(Collectors.toMap(Program::getMainValveId, p -> p.getDurations().keySet()));
 		
@@ -509,8 +528,8 @@ public class Controller implements Runnable {
 			return;
 		}
 		
-		for(Entry<Integer, Set<Integer>> entry: map.entrySet()) {
-			Integer mainValveId = entry.getKey();
+		for(Entry<String, Set<String>> entry: map.entrySet()) {
+			String mainValveId = entry.getKey();
 
 			if(mainValveId == null) {
 				// no main station assigned
@@ -525,7 +544,7 @@ public class Controller implements Runnable {
 			}
 			
 			boolean running = false;
-			for(Integer id: entry.getValue()) {
+			for(String id: entry.getValue()) {
 				Station station = stations.get(id);
 				if(station != null && station.isActive()) {
 					running = true;
