@@ -1,4 +1,4 @@
-package de.operatorplease.sprinkler.weather;
+package de.operatorplease.sprinkler.weather.provider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,10 +9,13 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.operatorplease.sprinkler.Weather;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import de.operatorplease.sprinkler.weather.Weather;
 
 public class OpenWeather extends Weather {
-	private final Logger logger = Logger.getLogger(OpenWeather.class.getName());
+	private final Logger logger = Logger.getLogger(OpenWeather.class.getSimpleName());
 	
 	private String apiUrl = "api.openweathermap.org/data/2.5";
 	private String apiKey;
@@ -27,7 +30,7 @@ public class OpenWeather extends Weather {
 	
 	@Override
 	public void check() {
-		String api = String.format("https://%s/onecall?appid=%s&lat=%s&lon=%s&units=metric", 
+		String api = String.format("https://%s/onecall?appid=%s&lat=%s&lon=%s&units=metric&exclude=alerts,minutely,hourly", 
 				apiUrl, apiKey, lat, lon);
 		logger.info("Calling weather api " + api);
 		
@@ -58,14 +61,20 @@ public class OpenWeather extends Weather {
 					response += scanner.nextLine();
 				}
 			}
+			
+			final JsonNode weather = new ObjectMapper().readTree(response);
+			final JsonNode current = weather.findPath("current");
+			if(!current.isMissingNode()) {
+				JsonNode currentTemp = current.findValue("temp");
+				double t = currentTemp.asDouble();
+				
+				JsonNode humidity = current.findValue("humidity");
+				double h = humidity.asDouble();
+			}
+			
 		} catch (IOException e) {
 			logger.log(Level.WARNING, "Weather api error", e);
 			return;
 		}
-	}
-	
-	@Override
-	public float getAdjustment() {
-		return 1.0f;
-	}
+	}	
 }

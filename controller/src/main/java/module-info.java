@@ -1,6 +1,7 @@
 module de.operatorplease.sprinkler {
 	requires java.logging;
 	requires org.shredzone.commons.suncalc;
+	requires com.fasterxml.jackson.databind;
 	
 	exports de.operatorplease.sprinkler;
 	exports de.operatorplease.sprinkler.settings;

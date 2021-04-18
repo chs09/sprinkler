@@ -10,12 +10,17 @@ public abstract class Sensor {
 	public static final int BUTTON_MODE = 4;
 	
 	public enum TYPE {
+		
+		// unit: binary, 1 wet, 0 dry
+		SENSOR_TYPE_RAIN_CLICK,
+		
+		// unit: 1/10 mm, range 0 to 16500
 		SENSOR_TYPE_RAIN,
 		
-		// unit: 1/100 °C, range -40000 to 165000
+		// unit: 1/10 Â°C, range -4000 to 16500
 		SENSOR_TYPE_TEMPERATURE,
 		
-		// unit: 1/100 %, range 0 to 10000
+		// unit: 1/10 %, range 0 to 1000
 		SENSOR_TYPE_HUMIDITY,
 		
 		SENSOR_TYPE_FLOW,

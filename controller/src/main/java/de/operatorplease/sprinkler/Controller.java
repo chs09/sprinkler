@@ -30,9 +30,10 @@ import de.operatorplease.sprinkler.Notifier.LogdataType;
 import de.operatorplease.sprinkler.Notifier.MessageType;
 import de.operatorplease.sprinkler.Sensor.TYPE;
 import de.operatorplease.sprinkler.settings.Plan;
+import de.operatorplease.sprinkler.weather.Weather;
 
 public class Controller implements Runnable {
-	private final Logger logger = Logger.getLogger(Controller.class.getTypeName());
+	private final Logger logger = Logger.getLogger(Controller.class.getSimpleName());
 	
 	private LocalDateTime next_weather_check;
 	private LocalDateTime rd_stop_time;
@@ -44,6 +45,7 @@ public class Controller implements Runnable {
 	
 	private Display display = new Display();
 	private Weather weather = new Weather();
+	private Adjuster adjuster = new Adjuster();
 	private Clock clock = new Clock();
 	
 	private final List<Sensor> sensors = new CopyOnWriteArrayList<>();
@@ -99,7 +101,7 @@ public class Controller implements Runnable {
 		}
 	}
 
-	private void checkRainDelay(LocalDateTime now) {		
+	private boolean checkRainDelay(LocalDateTime now) {		
 		// ====== Check rain delay status ======
 		if (status.rainDelayed) {
 			if (rd_stop_time.isBefore(now)) { // rain delay is over
@@ -109,7 +111,7 @@ public class Controller implements Runnable {
 		}
 		
 		Optional<Sensor> rainSensor = sensors.stream()
-				.filter(s -> s.getType() == TYPE.SENSOR_TYPE_RAIN)
+				.filter(s -> s.getType() == TYPE.SENSOR_TYPE_RAIN_CLICK)
 				.findFirst();
 
 		if(rainSensor.isPresent()) {
@@ -119,6 +121,7 @@ public class Controller implements Runnable {
 				notifier.push_message(NOTIFY_RAINDELAY, 0, LOGDATA_RAINDELAY, 1);		
 			}
 		}
+		return status.rainDelayed;
 	}
 	
 	private void flowPoll(LocalDateTime now) {
@@ -220,13 +223,13 @@ public class Controller implements Runnable {
 					
 					// check weather, seasonal adjustment
 					if(runningProgram.isWeatherDependent()) {
-						float weatherAdjusment = weather.getAdjustment();
+						float weatherAdjusment = adjuster.getAdjustment();
 						if(weatherAdjusment < 0) {
 							// reset to 100%
 							weatherAdjusment = 1;
 						}
-						// max. 150%
-						weatherAdjusment = Math.min(1.5f, weatherAdjusment);
+						// max. 200%
+						weatherAdjusment = Math.min(2.0f, weatherAdjusment);
 						wateringTime = (long) (wateringTime * weatherAdjusment);
 					}
 					
@@ -284,6 +287,10 @@ public class Controller implements Runnable {
 				scheduleZones();
 			} // if_check_current_minute
 		}
+		
+		public boolean isActive() {
+			return !queue.isEmpty();
+		}
 
 		public void reset() {
 			logger.info("reset scheduler");
@@ -309,7 +316,7 @@ public class Controller implements Runnable {
 				if(cycle == durations.length) {
 					OptionalDouble avg = Arrays.stream(durations).average();
 					double avgTime = avg.getAsDouble();
-					logger.log((avgTime > 30) ? Level.WARNING : Level.FINE, "avg main cycle time "+ avgTime + "ms.");
+					logger.log((avgTime > 30) ? Level.WARNING : Level.FINEST, "avg main cycle time "+ avgTime + "ms.");
 					cycle = 0;
 				}
 			} catch (InterruptedException e) {
@@ -454,6 +461,13 @@ public class Controller implements Runnable {
 		// ===== Check program switch status =====
 		checkButtons();
 		
+		// manual modes are reset after some time
+		if(resetModeAfter != null && resetModeAfter.isAfter(now)) {
+			status.duration = Duration.between(now, resetModeAfter);
+		} else {
+			status.duration = null;
+		}
+		
 		if (display != null) {
 			display.printTime(now);
 			display.updateStatus(status);
@@ -462,23 +476,23 @@ public class Controller implements Runnable {
 		// ====== Check flow sensor, if preset ======
 		flowPoll(now);
 		
-		// ====== Check rain delay status ======
-		checkRainDelay(now);
-
 		// ====== Check binary (i.e. rain or soil) sensor status ======
 		for (Sensor sensor : sensors) {
 			notifier.push_message(MessageType.NOTIFY_SENSOR, sensor.getType().ordinal(), LogdataType.LOGDATA_ONOFF, 1);
 		}
 
-		if(resetModeAfter != null && resetModeAfter.isAfter(now)) {
-			status.duration = Duration.between(now, resetModeAfter);
-		} else {
-			status.duration = null;
-		}
-		
-		// ====== schedule program data ======
+		// ====== schedule programs ======
 		if(state.getMode() == Mode.AUTOMATIC) {
-			scheduler.schedule(now);
+			// ====== Check rain delay status ======
+			if(checkRainDelay(now)) {
+				// stop all programs when it rains
+				if(scheduler.isActive()) {
+					scheduler.reset();
+					resetAllZonesImmediate();
+				}
+			} else {
+				scheduler.schedule(now);
+			}
 		}
 		
 		// ====== check network connection ====== 
