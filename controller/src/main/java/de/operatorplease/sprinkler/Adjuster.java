@@ -2,6 +2,7 @@ package de.operatorplease.sprinkler;
 
 import java.util.logging.Logger;
 
+import de.operatorplease.sprinkler.weather.WeatherData;
 import de.operatorplease.sprinkler.weather.Weather;
 import de.operatorplease.sprinkler.weather.WeatherStore;
 
@@ -36,10 +37,8 @@ import de.operatorplease.sprinkler.weather.WeatherStore;
 public class Adjuster {
 	private final Logger logger = Logger.getLogger(Adjuster.class.getSimpleName());
 	
-	// TODO use weather data if available,
-	// use today forecast before sunset and sunrise
-	// use today's avg between sunrise and sunset
-	// alt: use forecast before 13:00
+	private static final int NEUTRAL_HUMIDITY = 30;
+	private static final float NEUTRAL_TEMP = 21;
 	
 	private final WeatherStore weatherStore;
 	
@@ -48,28 +47,39 @@ public class Adjuster {
 	}
 
 	public float getAdjustment() {
-		return 1.0f;
+		WeatherData today = weatherStore.getToday();
+		WeatherData yesterday = weatherStore.getYesterday();
+		return getScale(today, yesterday);
 	}
 	
-	class Vals {
-		public int maxhumidity = NEUTRAL_HUMIDITY;
-		public int minhumidity = NEUTRAL_HUMIDITY;
-		public int meantempi = NEUTRAL_TEMP_C;
-		public int precipi = 0;
-		public int precip_today = 0;
-	}
-	
-	private static final int NEUTRAL_HUMIDITY = 30;
-	private static final int NEUTRAL_TEMP_C = 21;
-
-	int getScale(Vals vals)
+	private float getScale(WeatherData today, WeatherData yesterday)
 	{
-		final int humid_factor = NEUTRAL_HUMIDITY - (vals.maxhumidity + vals.minhumidity) / 2;
-		final int temp_factor = (vals.meantempi - NEUTRAL_TEMP_C) * 4;
-		final int rain_factor = (int)((vals.precipi + vals.precip_today) * -0.8);
+		int humid_factor = 1;
+		if(today != null && today.getHumidity() != null) {
+			humid_factor = NEUTRAL_HUMIDITY - today.getHumidity();
+		}
 		
-		int adj = Math.min(Math.max(0, 100+humid_factor+temp_factor+rain_factor), 200);
-		logger.info(String.format("Adjusting H(%d) T(%d) R(%d): %d", humid_factor, temp_factor, rain_factor, adj));
-		return adj;
+		float temp_factor = 1;
+		if(today != null && today.getTemp() != null) {
+			temp_factor = (today.getTemp() - NEUTRAL_TEMP) * 4;
+		}
+		
+		// final int rain_factor = (int)((vals.precipi + vals.precip_today) * -0.8);
+		float rain = 0;
+		if(today != null && today.getPrecipitation() != null) {
+			// rain so far, maybe we should append rain probability
+			rain += today.getPrecipitation();
+		}
+		if(yesterday != null && yesterday.getPrecipitation() != null) {
+			rain += yesterday.getPrecipitation();
+		}
+		final float rain_factor = (int)(rain * -0.8);
+		final float adj_factor = humid_factor + temp_factor + rain_factor;
+		
+		int adj = Math.min(Math.max(0, 100 + (int) adj_factor), 200);
+		logger.info(String.format("Adjusting H(%d) T(%.2f) R(%.2f): %d", 
+				humid_factor, temp_factor, rain_factor, adj));
+		
+		return adj / 100f;
 	}
 }

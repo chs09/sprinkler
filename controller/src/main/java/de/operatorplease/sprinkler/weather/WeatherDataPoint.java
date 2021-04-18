@@ -3,12 +3,22 @@ package de.operatorplease.sprinkler.weather;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-public class DataPoint {
+/**
+ * Snapshot for weather data at a point in time.
+ */
+public class WeatherDataPoint {
+	/**
+	 * Temperature in °C
+	 */
 	private Float temp;
+	
+	/**
+	 * Humidity in %
+	 */
 	private Integer humidity;
 	
 	/**
-	 * Atmospheric pressure
+	 * Atmospheric pressure on the sea level, hPa
 	 */
 	private Integer pressure;
 	
@@ -28,7 +38,7 @@ public class DataPoint {
 	 */
 	private Integer precipitationProbability;
 
-	static Float round(Float value) {
+	public static Float round(Float value) {
 		if(value != null) {
 			return new BigDecimal(value).setScale(2, RoundingMode.FLOOR).floatValue();
 		} else {

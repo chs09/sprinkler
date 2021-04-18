@@ -500,8 +500,17 @@ public class Controller implements Runnable {
 
 		// ====== check weather ====== 
 		if( next_weather_check == null || next_weather_check.isBefore(now) ) {
-			next_weather_check = now.plusMinutes(30); 
-			weather.check();
+			next_weather_check = now.plus(weather.getUpdateInterval());
+			new Thread("weather-update-thread") {
+				@Override
+				public void run() {
+					try {
+						weather.check();
+					} catch (Exception e) {
+						logger.log(Level.SEVERE, "Error while updating weather data", e);
+					}
+				}
+			}.start();
 		}
 	}
 

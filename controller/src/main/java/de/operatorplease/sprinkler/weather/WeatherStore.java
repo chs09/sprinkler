@@ -7,9 +7,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalDouble;
@@ -29,33 +28,42 @@ public class WeatherStore {
 	// data object to serialize / deserialize the state
 	static class Store {
 		public LocalDate currentDate;
-		public DataPoint current;
-		public final List<DataPoint> today = new ArrayList<>();
-		public final Map<LocalDate, Data> history = new LinkedHashMap<>() {
+		public WeatherDataPoint current;
+		
+		public final Map<LocalDateTime, WeatherDataPoint> today = new LinkedHashMap<>() {
 			private static final long serialVersionUID = 8456961946275535312L;
 
-			protected boolean removeEldestEntry(Map.Entry<LocalDate,Data> eldest) {
+			protected boolean removeEldestEntry(Map.Entry<LocalDateTime,WeatherDataPoint> eldest) {
+				LocalDateTime time = eldest.getKey();
+				return time.isBefore(time.minusHours(24));
+			};
+		};
+		
+		public final Map<LocalDate, WeatherData> history = new LinkedHashMap<>() {
+			private static final long serialVersionUID = 8456961946275535312L;
+
+			protected boolean removeEldestEntry(Map.Entry<LocalDate,WeatherData> eldest) {
 				// do not store longer than 1 year
 				// can be changed later
 				return history.size() >= 366;
 			};
 		};
 
-		public void setToday(List<DataPoint> today) {
+		public void setToday(Map<LocalDateTime, WeatherDataPoint> today) {
 			if(today != null) {
-				this.today.clear();
-				this.today.addAll(today);
+				 this.today.clear();
+				 this.today.putAll(today);
 			}
 		}
 		
-		public void setHistory(Map<LocalDate, Data> history) {
+		public void setHistory(Map<LocalDate, WeatherData> history) {
 			if(history != null) {
 				this.history.clear();
 				this.history.putAll(history);;
 			}
 		}
 		
-		public void setCurrent(DataPoint current) {
+		public void setCurrent(WeatherDataPoint current) {
 			this.current = current;
 		}
 		
@@ -63,7 +71,7 @@ public class WeatherStore {
 			this.currentDate = currentDate;
 		}
 		
-		public DataPoint getCurrent() {
+		public WeatherDataPoint getCurrent() {
 			return current;
 		}
 		
@@ -71,11 +79,11 @@ public class WeatherStore {
 			return currentDate;
 		}
 		
-		public Map<LocalDate, Data> getHistory() {
+		public Map<LocalDate, WeatherData> getHistory() {
 			return history;
 		}
 		
-		public List<DataPoint> getToday() {
+		public Map<LocalDateTime, WeatherDataPoint> getToday() {
 			return today;
 		}
 	}
@@ -97,53 +105,49 @@ public class WeatherStore {
 		}
 	}
 	
-	private DoubleStream mapToDouble(Stream<DataPoint> stream, Function<DataPoint, ? extends Number> map) {
+	private DoubleStream mapToDouble(Stream<WeatherDataPoint> stream, Function<WeatherDataPoint, ? extends Number> map) {
 		return stream
 				.map(map)
 				.filter(Objects::nonNull)
 				.mapToDouble(Number::doubleValue);		
 	}
 	
-	private void max(Stream<DataPoint> stream, Function<DataPoint, ? extends Number> map, Consumer<Float> consumer) {
+	private void max(Stream<WeatherDataPoint> stream, Function<WeatherDataPoint, ? extends Number> map, Consumer<Float> consumer) {
 		OptionalDouble optValue = mapToDouble(stream, map).min();
 		if(optValue.isPresent()) {
 			consumer.accept(Float.valueOf((float) optValue.getAsDouble()));
 		}
 	}
 
-	private void min(Stream<DataPoint> stream, Function<DataPoint, ? extends Number> map, Consumer<Float> consumer) {
+	private void min(Stream<WeatherDataPoint> stream, Function<WeatherDataPoint, ? extends Number> map, Consumer<Float> consumer) {
 		OptionalDouble optValue = mapToDouble(stream, map).min();
 		if(optValue.isPresent()) {
 			consumer.accept(Float.valueOf((float) optValue.getAsDouble()));
 		}
 	}
 	
-	private void average(Stream<DataPoint> stream, Function<DataPoint, ? extends Number> map, Consumer<Float> consumer) {
+	private void average(Stream<WeatherDataPoint> stream, Function<WeatherDataPoint, ? extends Number> map, Consumer<Float> consumer) {
 		OptionalDouble optValue = mapToDouble(stream, map).average();
 		if(optValue.isPresent()) {
 			consumer.accept(Float.valueOf((float) optValue.getAsDouble()));
 		}
 	}
 	
-	public void update(DataPoint dp) {
-		LocalDate now = LocalDate.now();
-		if(store.current != null && store.currentDate.isBefore(now)) {
+	public void update(WeatherDataPoint dp) {
+		LocalDateTime now = LocalDateTime.now();
+		if(store.current != null && store.currentDate.isBefore(now.toLocalDate())) {
 			// calc local avg values, add to history, reset today
 			if(!store.today.isEmpty()) {
-				Data data = store.history.computeIfAbsent(store.currentDate, today -> new Data(today));
-				
-				average(store.today.stream(), DataPoint::getTemp, f -> data.setTemp(f));
-				average(store.today.stream(), DataPoint::getHumidity, f -> data.setHumidity(f.intValue()));
-				average(store.today.stream(), DataPoint::getPressure, f -> data.setPressure(f.intValue()));
-				
-				min(store.today.stream(), DataPoint::getTemp, f -> data.setMinTemp(f));
-				max(store.today.stream(), DataPoint::getTemp, f -> data.setMaxTemp(f));
+				WeatherData data = getToday();
+				if(data != null) {
+					store.history.put(store.currentDate, data);
+				}
 			}
 			store.today.clear();
 		}
-		store.currentDate = now;
+		store.currentDate = now.toLocalDate();
 		store.current = dp;
-		store.today.add(dp);
+		store.today.put(now, dp);
 		save();
 	}
 	
@@ -160,17 +164,33 @@ public class WeatherStore {
 		}
 	}
 	
-	public void addForecast(Data data) {
+	public void addForecast(WeatherData data) {
 		store.history.put(data.getDate(), data); 
 	}
 	
-	public Data getTomorrow() {
+	public WeatherData getTomorrow() {
 		LocalDate tomorrow = LocalDate.now().plusDays(1);
 		return store.history.get(tomorrow);
 	}
 	
-	public Data getYesterday() {
+	public WeatherData getYesterday() {
 		LocalDate yesterday = LocalDate.now().minusDays(1);
 		return store.history.get(yesterday);
+	}
+	
+	/**
+	 * provides the average values of the last 24 hours
+	 */
+	public WeatherData getToday() {
+		WeatherData data = store.history.computeIfAbsent(store.currentDate, today -> new WeatherData(today));
+		
+		average(store.today.values().stream(), WeatherDataPoint::getTemp, f -> data.setTemp(f));
+		average(store.today.values().stream(), WeatherDataPoint::getHumidity, f -> data.setHumidity(f.intValue()));
+		average(store.today.values().stream(), WeatherDataPoint::getPressure, f -> data.setPressure(f.intValue()));
+		
+		min(store.today.values().stream(), WeatherDataPoint::getTemp, f -> data.setMinTemp(f));
+		max(store.today.values().stream(), WeatherDataPoint::getTemp, f -> data.setMaxTemp(f));
+
+		return data;
 	}
 }

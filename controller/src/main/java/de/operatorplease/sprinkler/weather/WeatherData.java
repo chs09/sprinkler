@@ -3,17 +3,31 @@ package de.operatorplease.sprinkler.weather;
 import java.time.LocalDate;
 import java.util.Objects;
 
-public class Data extends DataPoint {
+/**
+ * Weather data of a whole day.
+ * Some values are average values, partly supplemented by min and max values.
+ */
+public class WeatherData extends WeatherDataPoint {
+	/**
+	 * Date to which this record belongs
+	 */
 	private LocalDate date;
-	private Float minTemp;
-	private Float maxTemp;
-	private Float nightTemp;
 	
-	public Data() {
+	/**
+	 * Min daily temperature
+	 */
+	private Float minTemp;
+	
+	/**
+	 * Max daily temperature
+	 */
+	private Float maxTemp;
+	
+	public WeatherData() {
 		this.date = LocalDate.now();
 	}
 	
-	public Data(LocalDate date) {
+	public WeatherData(LocalDate date) {
 		this.date = Objects.requireNonNull(date);
 	}
 	
@@ -29,14 +43,6 @@ public class Data extends DataPoint {
 		return minTemp;
 	}
 	
-	public Float getNightTemp() {
-		return nightTemp;
-	}
-	
-	public boolean isSameDate(LocalDate date) {
-		return this.date.isEqual(date);
-	}
-	
 	public void setDate(LocalDate date) {
 		this.date = Objects.requireNonNull(date);
 	}
@@ -47,9 +53,5 @@ public class Data extends DataPoint {
 	
 	public void setMinTemp(Float minTemp) {
 		this.minTemp = round(minTemp);
-	}
-	
-	public void setNightTemp(Float nightTemp) {
-		this.nightTemp = round(nightTemp);
 	}
 }
