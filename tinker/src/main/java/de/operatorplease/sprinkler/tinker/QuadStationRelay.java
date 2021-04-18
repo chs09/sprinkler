@@ -14,7 +14,7 @@ import de.operatorplease.sprinkler.Station;
 import de.operatorplease.sprinkler.settings.Zone;
 
 public class QuadStationRelay {
-	private final Logger logger = Logger.getLogger(QuadStationRelay.class.getTypeName());
+	private final Logger logger = Logger.getLogger(QuadStationRelay.class.getSimpleName());
 	
 	private BrickletIndustrialQuadRelayV2 relay;
 

@@ -10,7 +10,7 @@ import com.tinkerforge.TinkerforgeException;
 import de.operatorplease.sprinkler.Sensor;
 
 public class ButtonSensor extends Sensor implements BrickletDualButtonV2.StateChangedListener {
-	private final Logger logger = Logger.getLogger(ButtonSensor.class.getTypeName());
+	private final Logger logger = Logger.getLogger(ButtonSensor.class.getSimpleName());
 	
 	private BrickletDualButtonV2 brickletDualButtonV2;
 	private AtomicInteger value = new AtomicInteger();
