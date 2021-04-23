@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+
+	<link rel="stylesheet" href="lib/onsen/css/onsenui.css">
+	<link rel="stylesheet" href="lib/onsen/css/onsen-css-components.css">
+	<link rel="stylesheet" href="styles.css">
+	<script src="lib/onsen/js/onsenui.js"></script>
+	<script type="module" src="./js/app.js"></script>
+</head>
+
+<body>
+  <!-- First navigation component: Navigator. This will remain always on top of the app. -->
+  <ons-navigator id="navigator" animation="slide" page="index.html"></ons-navigator>
+  
+  <template id="index.html">
+	<ons-page>
+		<div class="content" style="text-align: center; margin: 0.5rem; max-width: 600px;">
+			<ons-list-title>Status</ons-list-title>
+			<ons-list>
+				<ons-list-item>
+					<div class="left">
+						<ons-icon icon="fa-robot" title="Automatic"></ons-icon>
+						<label for="enabled">Automatic</label>
+					</div>
+					<div class="right">
+						<ons-switch input-id="enabled" modifier="material" checked></ons-switch>
+					</div>
+				</ons-list-item>
+
+				<ons-list-item>
+					<div class="left">
+						<ons-icon icon="fa-tint" title="Running"></ons-icon>
+						<label>Running</label>
+					</div>
+					<div class="center">
+						<span id="runningzone">0</span>
+						&nbsp;&rArr;&nbsp;
+						<span id="runningtime">00:00</span>
+					</div>
+				</ons-list-item>
+
+				<ons-list-item>
+					<div class="left">
+						<ons-icon icon="fa-arrow-alt-circle-right" title="Upcoming"></ons-icon>
+						<label>Upcoming</label>
+					</div>
+					<div class="center"><em>None</em></div>
+				</ons-list-item>
+
+				<ons-list-item>
+					<div class="left">
+						<ons-icon icon="fa-cloud-sun" title="Weather"></ons-icon>
+						<label>Weather</label>
+					</div>
+					<div class="center"><em>N/A</em></div>
+				</ons-list-item>
+
+				<ons-list-item>
+					<div class="left">
+						<ons-icon icon="fa-thermometer-full" title="Sensors"></ons-icon>
+						<label>Sensors</label>
+					</div>
+					<div class="center"><em>N/A</em></div>
+				</ons-list-item>
+			</ons-list>
+		</div>
+
+		<ons-speed-dial position="bottom right" direction="up">
+			<ons-fab>
+			  <ons-icon icon="fa-heartbeat" title="Status"></ons-icon>
+			</ons-fab>
+			<ons-speed-dial-item>
+			  <ons-icon id="action_logfile" icon="fa-file-alt"></ons-icon>
+			</ons-speed-dial-item>
+			<ons-speed-dial-item>
+			  <ons-icon id="action_settings" icon="fa-cogs"></ons-icon>
+			</ons-speed-dial-item>
+			<ons-speed-dial-item>
+			  <ons-icon id="action_schedules" icon="fa-calendar"></ons-icon>
+			</ons-speed-dial-item>
+		  </ons-speed-dial>
+	</ons-page>
+</template>
+</body>
+
+</html>

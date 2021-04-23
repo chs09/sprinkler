@@ -1,0 +1,18 @@
+/* Custom Theme for Onsen UI 2.11.2 */
+
+body {
+	max-width: 600px;
+}
+
+ons-page div.content {
+	margin: 0.5rem; 
+	max-width: 600px;
+}
+
+.left ons-icon {
+	width: 2rem;
+}
+
+label.left, .left label {
+	width: 6rem;
+}

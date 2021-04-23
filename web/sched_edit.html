@@ -1,0 +1,103 @@
+<ons-page id="page-sched-edit">
+	<div class="content" style="text-align: center; margin: 0.5rem; max-width: 600px;">
+		<ons-list-title>Edit Schedule</ons-list-title>
+		<ons-list>
+			<ons-list-item>
+				<label for="name" class="left">Name</label>
+				<ons-input input-id="name" class="center" placeholder="Name e.g. Backyard"></ons-input>
+			</ons-list-item>
+
+			<ons-list-item>
+				<label for="enabled" class="left">Enabled</label>
+				<label>activate or deactivate this schedule</label>
+				<div class="right">
+					<ons-switch input-id="enabled" modifier="material" checked></ons-switch>
+				</div>
+			</ons-list-item>
+
+			<ons-list-item>
+				<label for="adjust" class="left">Weather</label>
+				<label>adjust runtimes depending on weather data</label>
+				<div class="right">
+					<ons-switch input-id="adjust" modifier="material" checked></ons-switch>
+				</div>
+			</ons-list-item>
+
+			<ons-list-header expandable>Days</ons-list-header>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d1" class="left"></ons-checkbox>
+				<label for="d1" class="center">Monday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d2" class="left"></ons-checkbox>
+				<label for="d2" class="center">Tuesday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d3" class="left"></ons-checkbox>
+				<label for="d3" class="center">Wednesday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d4" class="left"></ons-checkbox>
+				<label for="d4" class="center">Thursday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d5" class="left"></ons-checkbox>
+				<label for="d5" class="center">Friday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d6" class="left"></ons-checkbox>
+				<label for="d6" class="center">Saturday</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-checkbox input-id="d7" class="left"></ons-checkbox>
+				<label for="d7" class="center">Sunday</label>
+			</ons-list-item>
+
+			<ons-list-header expandable>Restrictions</ons-list-header>
+			<ons-list-item tappable>
+				<ons-radio input-id="rNone" name="restriction" value="NONE" class="left" checked></ons-radio>
+				<label for="rNone" class="center">None</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-radio input-id="rOdd" name="restriction" value="ODD" class="left"></ons-radio>
+				<label for="rOdd" class="center">Odd days only</label>
+			</ons-list-item>
+			<ons-list-item tappable>
+				<ons-radio input-id="rEven" name="restriction" value="EVEN" class="left"></ons-radio>
+				<label for="rEven" class="center">Even days only</label>
+			</ons-list-item>
+
+			<ons-list-header expandable>Zones</ons-list-header>
+			<ons-list-item tappable>
+				<ons-select id="choose-main" class="center" onchange="editSelects(event)">
+					<option value="">None</option>
+					<option value="z1">Zone 1</option>
+					<option value="z2">Zone 2</option>
+				</ons-select>
+				<label for="choose-main" class="left">Main</label>
+			</ons-list-item>
+
+			<ons-list-item>
+				<label for="t1" class="left">Zone 1</label>
+				<ons-input type="time" input-id="t1"></ons-input>
+				<ons-toolbar-button class="right" onClick="document.getElementById('t1').value = undefined;">
+					<ons-icon icon="fa-eraser"></ons-icon>
+				</ons-toolbar-button>
+			</ons-list-item>
+		</ons-list>
+	</div>
+
+	<ons-toolbar>
+		<div class="left">
+			<ons-back-button>Go Back</ons-back-button>
+		</div>
+	</ons-toolbar>
+
+	<!-- <ons-bottom-toolbar style="padding-top: 0.75rem;">
+			<ons-toolbar-button modifier="outline">
+				<ons-icon icon="fa-save"></ons-icon>
+				Save
+			</ons-toolbar-button>
+
+		</ons-bottom-toolbar> -->
+</ons-page>

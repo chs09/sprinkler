@@ -1,0 +1,27 @@
+{
+  "name": "onsenui",
+  "version": "2.11.2",
+  "description": "HTML5 Mobile Framework & UI Components",
+  "private": false,
+  "main": "js/onsenui.js",
+  "typings": "js/onsenui.d.ts",
+  "files": [
+    "bower.json",
+    "css",
+    "css-components-src",
+    "js",
+    "esm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OnsenUI/OnsenUI"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/OnsenUI/OnsenUI/issues"
+  },
+  "homepage": "https://onsen.io/",
+  "engines": {
+    "node": ">= 4.0.0"
+  }
+}

@@ -1,0 +1,33 @@
+<ons-page id="page-sched-list">
+	<div class="content" style="text-align: center; margin: 0.5rem; max-width: 600px;">
+		<ons-list-title>Schedules</ons-list-title>
+		<ons-list id="schedule_list">
+			<ons-list-item id="schedule-create-new" tappable
+				onClick="document.querySelector('ons-navigator').pushPage('sched_edit.html', {data: {id: -1}});">
+				<div class="left">
+					<ons-icon icon="fa-plus"></ons-icon>
+				</div>
+				<label class="center text-muted"><em>Create New Schedule</em></label>
+			</ons-list-item>
+
+			<!-- <ons-list-item tappable
+				onClick="document.querySelector('ons-navigator').pushPage('sched_edit.html', {id: 1});">
+				<label class="center">Front</label>
+				<div class="left">
+					<ons-icon icon="fa-edit"></ons-icon>
+				</div>
+
+				<ons-toolbar-button class="right" title="Schedule Actions"
+					onClick="openScheduleActions(1); event.stopPropagation();">
+					<ons-icon icon="fa-bars"></ons-icon>
+				</ons-toolbar-button>
+			</ons-list-item> -->
+		</ons-list>
+	</div>
+
+	<ons-toolbar>
+		<div class="left">
+			<ons-back-button>Go Back</ons-back-button>
+		</div>
+	</ons-toolbar>
+</ons-page>
