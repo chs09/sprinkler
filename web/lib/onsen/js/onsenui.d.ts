@@ -1247,11 +1247,11 @@ interface LazyRepeatOptions {
   /**
    * @description This function should return a `HTMLElement`. To help rendering the element, the current index and a template is supplied as arguments. The template is the initial content of the `<ons-lazy-repeat>` element.
    */
-  createItemContent?: HTMLElement;
+  createItemContent?: (i:number) => HTMLElement;
   /**
    * @description Should return the number of items in the list.
    */
-  countItems?: number;
+  countItems?: () => number;
   /**
    * @description Should return the height of an item. The index is provided as an argument. This is important when rendering lists where the items have different height. The function is optional and if it isn't present the height of the first item will be automatically calculated and used for all other items.
    */
@@ -1263,7 +1263,7 @@ interface LazyRepeatOptions {
   /**
    * @description Function which recieves an index and the scope for the item. Can be used to configure values in the item scope.
    */
-  configureItemScope?: number;
+  configureItemScope?: (index:number, itemScope) => any;
 }
 
 interface SplitterContentOptions {

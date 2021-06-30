@@ -78,6 +78,10 @@ export class Selection {
 		this.input = input;
 	}
 
+	get element() : HTMLElement {
+		return this.input;
+	}
+
 	get value() {
 		return this.input.selectedIndex === -1 ? null : this.input.options[this.input.selectedIndex].value;
 	}

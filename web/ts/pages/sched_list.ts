@@ -1,5 +1,5 @@
-import * as Page from "./page.js"
-import * as Store from "./datastore.js";
+import * as Page from "../page.js"
+import * as Store from "../datastore.js";
 
 //@ts-ignore, wrap global to prevent ts error
 declare const ons: ons;
@@ -8,8 +8,8 @@ Page.awaitInit("page-sched-list", () => {
 	update();
 });
 
-function update() {
-	const list = Store.Schedules.list();
+async function update() {
+	const list = await Store.Schedules.list();
 	console.log(list);
 
 	const htmlList = document.getElementById("schedule_list");
