@@ -1,1 +1,2 @@
-web/js/*  linguist-generated=true
+web/js/*  linguist-generated
+web/lib/* linguist-vendored
