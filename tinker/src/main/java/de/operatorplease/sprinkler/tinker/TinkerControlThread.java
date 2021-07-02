@@ -1,32 +1,35 @@
 package de.operatorplease.sprinkler.tinker;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-
 import com.tinkerforge.BrickletDualButtonV2;
 import com.tinkerforge.BrickletHumidityV2;
 import com.tinkerforge.BrickletIndustrialQuadRelayV2;
 import com.tinkerforge.BrickletOLED128x64V2;
 import com.tinkerforge.IPConnection;
 
-import de.operatorplease.sprinkler.Clock;
 import de.operatorplease.sprinkler.Controller;
 
-public class Test {
-	private static final String HOST = "192.168.178.50";
-	private static final int PORT = 4223;
+public class TinkerControlThread extends Thread {
+	private final String HOST; //  = "192.168.178.50";
+	private final int PORT; // = 4223;
+	
 	private static IPConnection ipcon = null;
 	private static Enumerator listener = null;
 
-	public static void main(String[] args) {
-		new Test().run();
+	private final Controller controller;
+
+	public TinkerControlThread(String host, int port) {
+		this.HOST = host;
+		this.PORT = port;
+		
+		this.controller = new Controller();
 	}
 	
-	private Controller controller;
+	public Controller getController() {
+		return controller;
+	}
 	
-	private void run() {
-		controller = new Controller();
-		
+	@Override
+	public void run() {
 		ipcon = new IPConnection();
 		while(true) {
 			try {
@@ -58,26 +61,11 @@ public class Test {
 			}
 		}
 
-		// TODO remove, for demo purposes use a clock, with 6 times speed
-		controller.setClock(new Clock() {
-			private final LocalDateTime start = LocalDateTime.now();
-			@Override
-			public LocalDateTime now() {
-				LocalDateTime now = LocalDateTime.now();
-				long seconds = ChronoUnit.SECONDS.between(start, now);
-				// increment minutes every 10 seconds
-				return start.plusMinutes(seconds / 10).withSecond(now.getSecond());
-			}
-		});
-
 		//controller.setZones(null, null);
 		//controller.setPrograms(null);
 
 		try {
 			controller.run();
-			System.out.println("Press key to exit"); System.in.read();
-		} catch(Exception e) {
-			
 		} finally {
 			try {
 				ipcon.disconnect();

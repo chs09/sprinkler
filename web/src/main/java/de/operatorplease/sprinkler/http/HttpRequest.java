@@ -15,7 +15,11 @@ import com.sun.net.httpserver.Headers;
  */
 public class HttpRequest {
 
-    private final String method;
+	public enum Method {
+		GET, HEAD, POST, PUT, OPTION, DELETE, CONNECT, OPTIONS, TRACE, PATCH
+	}
+	
+    private final Method method;
     private final URI uri;
     private final String path;
     private final Map<String, String> queryParameters;
@@ -23,7 +27,7 @@ public class HttpRequest {
     private final Headers headers;
     private final String body;
 
-    public HttpRequest(String method, String path, URI uri, String protocolVersion, Headers headers, String body) {
+    public HttpRequest(Method method, String path, URI uri, String protocolVersion, Headers headers, String body) {
         this.method = method;
         this.uri = uri;
         this.path = path;
@@ -33,7 +37,7 @@ public class HttpRequest {
         this.queryParameters = getQueryParameters(uri);
     }
 
-    public String getMethod() {
+    public Method getMethod() {
         return method;
     }
 

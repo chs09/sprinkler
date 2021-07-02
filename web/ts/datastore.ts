@@ -22,15 +22,11 @@ class ZonesStore {
 	}
 
 	start(id: string) {
-		return new Promise<void>( (resolve, reject) => {
-			setTimeout(resolve, 400);
-		});
+		return fetch(`/api/valve/${id}/open`, { method: 'POST' });
 	}
 
 	stop(id: string) {
-		return new Promise<void>( (resolve, reject) => {
-			resolve();
-		});
+		return fetch(`/api/valve/${id}/close`, { method: 'POST' });
 	}
 }
 export const Zones = new ZonesStore();

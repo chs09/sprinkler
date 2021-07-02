@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -94,11 +96,15 @@ public class Controller implements Runnable {
 		programs.forEach(plan -> this.programs.add(new Program(plan)));
 	}
 	
-	private void resetAllZonesImmediate() {
+	public void stopAllZonesImmediate() {
 		logger.info("reset all zone immediate");
 		for (Station zone : stations.values()) {
 			zone.stop();
 		}
+	}
+	
+	public Collection<Station> getStations() {
+		return Collections.unmodifiableCollection(stations.values());
 	}
 
 	private boolean checkRainDelay(LocalDateTime now) {		
@@ -321,6 +327,7 @@ public class Controller implements Runnable {
 				}
 			} catch (InterruptedException e) {
 				logger.log(Level.SEVERE, "interrupted");
+				Thread.currentThread().interrupt();
 				return;
 			} catch (Exception e) {
 				logger.log(Level.WARNING, "controller error", e);
@@ -365,7 +372,7 @@ public class Controller implements Runnable {
 				resetModeAfter = clock.now().plusHours(2);
 			}
 			
-			resetAllZonesImmediate();
+			stopAllZonesImmediate();
 			switch(mode) {
 			case AUTOMATIC: status.mode = 'A'; break;
 			case ITERATE_PROGRAMS: status.mode = 'M'; break;
@@ -488,7 +495,7 @@ public class Controller implements Runnable {
 				// stop all programs when it rains
 				if(scheduler.isActive()) {
 					scheduler.reset();
-					resetAllZonesImmediate();
+					stopAllZonesImmediate();
 				}
 			} else {
 				scheduler.schedule(now);

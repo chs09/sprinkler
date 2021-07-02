@@ -16,6 +16,8 @@ import com.sun.net.httpserver.Authenticator;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpContext;
 
+import de.operatorplease.sprinkler.http.HttpRequest.Method;
+
 /**
  * Represents a simple HTTP server (a facade around {@link com.sun.net.httpserver.HttpServer for unit testing.
  * The server is started after invoking the {@link HttpServer#start()} method. It's a good practice
@@ -73,9 +75,17 @@ public class HttpServer implements Closeable {
                     
                     String path = trimLeftSlash(makeRelativeURI(config.path, httpExchange.getRequestURI()));
                     
-                    config.httpHandler.handle(new HttpRequest(httpExchange.getRequestMethod(), path,
-                            httpExchange.getRequestURI(), httpExchange.getProtocol(), requestHeaders,
-                            readFromStream(httpExchange.getRequestBody())), response);
+                    Method method = Method.valueOf(httpExchange.getRequestMethod());
+                    try {
+	                    config.httpHandler.handle(new HttpRequest(method, path,
+	                            httpExchange.getRequestURI(), httpExchange.getProtocol(), requestHeaders,
+	                            readFromStream(httpExchange.getRequestBody())), response);
+                    } catch (HttpException e) {
+                    	response = new HttpResponse();
+                    	response.setStatusCode(e.getStatus());
+                    	response.setBody(e.getMessage());
+                    }
+                    
                     for (Map.Entry<String, List<String>> e : response.getHeaders().entrySet()) {
                         httpExchange.getResponseHeaders().put(e.getKey(), e.getValue());
                     }

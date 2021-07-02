@@ -3,6 +3,8 @@ package de.operatorplease.sprinkler.http;
 import java.io.File;
 import java.util.Objects;
 
+import de.operatorplease.sprinkler.http.HttpRequest.Method;
+
 public class HttpFileHandler implements HttpHandler {
 	
 	final File WEB_ROOT;
@@ -20,13 +22,11 @@ public class HttpFileHandler implements HttpHandler {
 	
 	@Override
 	public void handle(HttpRequest request, HttpResponse response) throws Exception {
-		String method = request.getMethod();
+		Method method = request.getMethod();
 		
 		// we support only GET and HEAD methods, we check
-		if (!method.equals("GET")  &&  !method.equals("HEAD")) {
-			System.out.println("501 Not Implemented : " + method + " method.");
-			response.setStatusCode(501);
-			return;
+		if (method != Method.GET  &&  method != Method.HEAD) {
+			throw new HttpExceptionMethodNotAllowed();
 		}
 		
 		String path = request.getPath();
@@ -52,7 +52,9 @@ public class HttpFileHandler implements HttpHandler {
 			return;
 		}
 		
-		response.setBody(file);
+		if(method != Method.HEAD) {
+			response.setBody(file);
+		}
 		System.out.println("File " + path + " requested, contentType " + response.getContentType());
 	}
 }

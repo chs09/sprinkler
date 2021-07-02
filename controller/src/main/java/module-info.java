@@ -1,4 +1,4 @@
-module de.operatorplease.sprinkler {
+module de.operatorplease.sprinkler.controller {
 	requires java.logging;
 	requires org.shredzone.commons.suncalc;
 	requires com.fasterxml.jackson.databind;
