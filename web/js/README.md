@@ -1,0 +1,10 @@
+# AUTO-GENERATED
+
+!!! WARNING !!! AUTO-GENERATED FILES, DO NOT MODIFY ANY FILE IN THIS DIRECTORY MANUALLY
+
+Use
+```
+npx tsc --watch
+```
+
+to update these files.
