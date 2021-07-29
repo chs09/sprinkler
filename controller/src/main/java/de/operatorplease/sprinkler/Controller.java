@@ -96,6 +96,12 @@ public class Controller implements Runnable {
 		programs.forEach(plan -> this.programs.add(new Program(plan)));
 	}
 	
+	public List<Plan> getPlans() {
+		return this.programs.stream()
+				.map(prg -> prg.getPlan())
+				.collect(Collectors.toList());
+	}
+	
 	public void stopAllZonesImmediate() {
 		logger.info("reset all zone immediate");
 		for (Station zone : stations.values()) {
@@ -307,7 +313,7 @@ public class Controller implements Runnable {
 
 	@Override
 	public void run() {
-		long[] durations = new long[10];
+		long[] durations = new long[100];
 		int cycle = 0;
 		while(true) {
 			try {
@@ -322,7 +328,7 @@ public class Controller implements Runnable {
 				if(cycle == durations.length) {
 					OptionalDouble avg = Arrays.stream(durations).average();
 					double avgTime = avg.getAsDouble();
-					logger.log((avgTime > 30) ? Level.WARNING : Level.FINEST, "avg main cycle time "+ avgTime + "ms.");
+					logger.log((avgTime > 30) ? Level.WARNING : Level.FINE, "avg main cycle time "+ avgTime + "ms.");
 					cycle = 0;
 				}
 			} catch (InterruptedException e) {

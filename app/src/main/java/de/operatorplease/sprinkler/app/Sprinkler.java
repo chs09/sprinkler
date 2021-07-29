@@ -36,5 +36,16 @@ public class Sprinkler {
 		webserverThread = new WebserverThread(controller, 80);
 		webserverThread.start();
 //		webserverThread.setUncaughtExceptionHandler(null)
+		
+		try {
+			controller.run();
+		} finally {
+			try {
+				tinkerThread.interrupt();
+			} finally {
+				webserverThread.interrupt();
+				tinkerThread.close();
+			}
+		}
 	}
 }

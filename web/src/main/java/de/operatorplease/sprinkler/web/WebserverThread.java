@@ -2,12 +2,15 @@ package de.operatorplease.sprinkler.web;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import de.operatorplease.sprinkler.Controller;
 import de.operatorplease.sprinkler.http.HttpFileHandler;
 import de.operatorplease.sprinkler.http.HttpServer;
 
 public class WebserverThread extends Thread {
+	
+	private final Logger logger = Logger.getLogger(WebserverThread.class.getSimpleName());
 	
 //	private final Controller controller;
 	private final HttpServer server;
@@ -26,11 +29,11 @@ public class WebserverThread extends Thread {
 		server.start(port);
 		try {
 			while(true) {
-				System.out.println("Webserver is running...");
+				logger.fine("Webserver is running...");
 				Thread.sleep(TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES));
 			}
         } catch (InterruptedException e) {
-        	System.out.println("Shutting down ...");
+        	logger.warning("Interrupted - shutting down ...");
             Thread.currentThread().interrupt();
         }
 	}

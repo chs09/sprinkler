@@ -1,5 +1,7 @@
 package de.operatorplease.sprinkler.tinker;
 
+import java.io.Closeable;
+
 import com.tinkerforge.BrickletDualButtonV2;
 import com.tinkerforge.BrickletHumidityV2;
 import com.tinkerforge.BrickletIndustrialQuadRelayV2;
@@ -8,7 +10,7 @@ import com.tinkerforge.IPConnection;
 
 import de.operatorplease.sprinkler.Controller;
 
-public class TinkerControlThread extends Thread {
+public class TinkerControlThread extends Thread implements Closeable {
 	private final String HOST; //  = "192.168.178.50";
 	private final int PORT; // = 4223;
 	
@@ -64,13 +66,18 @@ public class TinkerControlThread extends Thread {
 		//controller.setZones(null, null);
 		//controller.setPrograms(null);
 
+//		try {
+//			controller.run();
+//		} finally {
+//			close();
+//		}
+	}
+	
+	@Override
+	public void close() {
 		try {
-			controller.run();
-		} finally {
-			try {
-				ipcon.disconnect();
-			} catch(com.tinkerforge.NotConnectedException e) {
-			}
+			ipcon.disconnect();
+		} catch(com.tinkerforge.NotConnectedException e) {
 		}
 	}
 	
