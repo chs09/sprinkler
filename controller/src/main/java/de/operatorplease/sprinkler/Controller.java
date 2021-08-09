@@ -32,6 +32,7 @@ import de.operatorplease.sprinkler.Notifier.LogdataType;
 import de.operatorplease.sprinkler.Notifier.MessageType;
 import de.operatorplease.sprinkler.Sensor.TYPE;
 import de.operatorplease.sprinkler.settings.Plan;
+import de.operatorplease.sprinkler.settings.Settings;
 import de.operatorplease.sprinkler.weather.Weather;
 
 public class Controller implements Runnable {
@@ -556,46 +557,46 @@ public class Controller implements Runnable {
 	}
 
 	private void handleMainValve() {
-		Map<String, Set<String>> map = programs.stream()
-				.filter(p -> Objects.nonNull(p.getMainValveId()))
-				.collect(Collectors.toMap(Program::getMainValveId, p -> p.getDurations().keySet()));
+		Optional<Settings> settings = Settings.getInstance();
+		
+		String mainValveId = settings.isEmpty() ? null : settings.get().mainValve;
+		if(mainValveId == null) {
+			// no main station assigned
+			return;
+		}
+
+		Station main = stations.get(mainValveId);
+		if(main == null) {
+			// should not happen
+			logger.warning("Main station " + mainValveId + " not found.");
+			return;
+		}
+		
+		Set<String> map = programs.stream()
+				.filter(p -> Objects.nonNull(p.getDurations()))
+				.flatMap(p -> p.getDurations().keySet().stream())
+				.collect(Collectors.toSet());
 		
 		if(map.isEmpty()) {
 			return;
 		}
 		
-		for(Entry<String, Set<String>> entry: map.entrySet()) {
-			String mainValveId = entry.getKey();
-
-			if(mainValveId == null) {
-				// no main station assigned
-				continue;
+		boolean running = false;
+		for(String id: map) {
+			Station station = stations.get(id);
+			if(station != null && station.isActive()) {
+				running = true;
+				break;
 			}
+		}
 
-			Station main = stations.get(mainValveId);
-			if(main == null) {
-				// should not happen
-				logger.warning("Main station " + mainValveId + " not found.");
-				continue;
+		if(running) {
+			if(!main.isActive()) {
+				turnOn(main);
 			}
-			
-			boolean running = false;
-			for(String id: entry.getValue()) {
-				Station station = stations.get(id);
-				if(station != null && station.isActive()) {
-					running = true;
-					break;
-				}
-			}
-
-			if(running) {
-				if(!main.isActive()) {
-					turnOn(main);
-				}
-			} else {
-				if(main.isActive()) {
-					turnOff(main);
-				}
+		} else {
+			if(main.isActive()) {
+				turnOff(main);
 			}
 		}
 	}

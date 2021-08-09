@@ -28,12 +28,8 @@ class Program {
 	// underlying plan with times and zone allocation
 	private final Plan plan;
 	
-	// main valve; cannot be changed after instantiation, program has to be reloaded
-	private final String mainValveId;
-	
 	public Program(Plan plan) {
 		this.plan = Objects.requireNonNull(plan, "Plan should not be null");
-		this.mainValveId = plan.getMainValve();
 	}
 	
 	private void computeSunTimes() {
@@ -226,10 +222,6 @@ class Program {
 	
 	public int getPid() {
 		return plan.getPid();
-	}
-	
-	public String getMainValveId() {
-		return mainValveId;
 	}
 	
 	public Plan getPlan() {
